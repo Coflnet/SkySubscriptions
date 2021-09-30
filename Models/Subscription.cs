@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Coflnet.Sky.Subscriptions.Models
 {
@@ -7,6 +8,7 @@ namespace Coflnet.Sky.Subscriptions.Models
     public class Subscription
     {
         [IgnoreDataMember]
+        [JsonIgnore]
         public int Id { get; set; }
         /// <summary>
         /// Either User,auction or ItemId UserIds are +100.000
@@ -24,6 +26,7 @@ namespace Coflnet.Sky.Subscriptions.Models
 
         [System.ComponentModel.DataAnnotations.Timestamp]
         [IgnoreDataMember]
+        [JsonIgnore]
         public DateTime GeneratedAt { get; set; }
 
         public enum SubType
@@ -43,8 +46,10 @@ namespace Coflnet.Sky.Subscriptions.Models
         public SubType Type { get; set; }
 
         [IgnoreDataMember]
+        [JsonIgnore]
         public DateTime NotTriggerAgainBefore { get; set; }
         [IgnoreDataMember]
+        [JsonIgnore]
         public User User { get; set; }
         public int UserId { get; set; }
     }

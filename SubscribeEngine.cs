@@ -45,9 +45,11 @@ namespace Coflnet.Sky.Subscriptions
 
 
         public SubscribeEngine(
-                    IServiceScopeFactory scopeFactory)
+                    IServiceScopeFactory scopeFactory,
+                    NotificationService notificationService)
         {
             this.scopeFactory = scopeFactory;
+            this.NotificationService = notificationService;
         }
 
         ConsumerConfig conf = new ConsumerConfig
@@ -57,16 +59,18 @@ namespace Coflnet.Sky.Subscriptions
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
 
-        public async Task ProcessQueues()
+        public Task ProcessQueues(CancellationToken token)
         {
             var topics = new string[] { Indexer.AuctionEndedTopic, Indexer.SoldAuctionTopic, Indexer.MissingAuctionsTopic };
-            ProcessSubscription<SaveAuction>(topics, BinSold);
-            ProcessSubscription<SaveAuction>(new string[] { Indexer.NewAuctionsTopic }, NewAuction);
-            ProcessSubscription<BazaarPull>(new string[] { BazaarIndexer.ConsumeTopic }, NewBazaar);
-            ProcessSubscription<SaveAuction>(new string[] { Indexer.NewBidTopic }, NewBids);
+            Console.WriteLine("consuming");
+            return Task.WhenAny(
+            Task.Run(() => ProcessSubscription<SaveAuction>(topics, BinSold, token)),
+            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { Indexer.NewAuctionsTopic }, NewAuction, token)),
+            Task.Run(() => ProcessSubscription<BazaarPull>(new string[] { BazaarIndexer.ConsumeTopic }, NewBazaar, token)),
+            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { Indexer.NewBidTopic }, NewBids, token)));
         }
 
-        private void ProcessSubscription<T>(string[] topics, Action<T> handler, int timeout = 50)
+        private void ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
         {
             using (var c = new ConsumerBuilder<Ignore, T>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<T>()).Build())
             {
@@ -77,7 +81,7 @@ namespace Coflnet.Sky.Subscriptions
                     {
                         try
                         {
-                            var cr = c.Consume(timeout);
+                            var cr = c.Consume(token);
                             if (cr == null)
                                 continue;
                             handler(cr.Message.Value);
@@ -86,7 +90,7 @@ namespace Coflnet.Sky.Subscriptions
                         }
                         catch (ConsumeException e)
                         {
-                            dev.Logger.Instance.Error(e, "subscribe engine ");
+                            dev.Logger.Instance.Error(e, "subscribe engine " + string.Join(",",topics));
                         }
                     }
                 }
@@ -96,6 +100,7 @@ namespace Coflnet.Sky.Subscriptions
                     c.Close();
                 }
             }
+            Console.WriteLine("stopped listening " +  string.Join(",",topics));
         }
 
         public void AddNew(Subscription subscription)
@@ -201,14 +206,14 @@ namespace Coflnet.Sky.Subscriptions
                     if ((auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN)
                         || auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN))
                         && (!item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin))
-                        NotificationService.Instance.AuctionPriceAlert(item, auction);
+                        NotificationService.AuctionPriceAlert(item, auction);
                 }
             }
             if (this.UserAuction.TryGetValue(auction.AuctioneerId, out subscribers))
             {
                 foreach (var item in subscribers)
                 {
-                    NotificationService.Instance.NewAuction(item, auction);
+                    NotificationService.NewAuction(item, auction);
                 }
             }
         }
@@ -222,11 +227,11 @@ namespace Coflnet.Sky.Subscriptions
             var key = auction.AuctioneerId;
             NotifyIfExisting(this.Sold, key, sub =>
             {
-                NotificationService.Instance.Sold(sub, auction);
+                NotificationService.Sold(sub, auction);
             });
             NotifyIfExisting(this.AuctionSub, auction.Uuid, sub =>
             {
-                NotificationService.Instance.AuctionOver(sub, auction);
+                NotificationService.AuctionOver(sub, auction);
             });
         }
 
@@ -251,18 +256,18 @@ namespace Coflnet.Sky.Subscriptions
             {
                 NotifyIfExisting(this.outbid, bid.Bidder, sub =>
                 {
-                    NotificationService.Instance.Outbid(sub, auction, bid);
+                    NotificationService.Outbid(sub, auction, bid);
                 });
             }
             NotifyIfExisting(this.AuctionSub, auction.Uuid, sub =>
             {
-                NotificationService.Instance.NewBid(sub, auction, auction.Bids.OrderBy(b => b.Amount).Last());
+                NotificationService.NewBid(sub, auction, auction.Bids.OrderBy(b => b.Amount).Last());
             });
             foreach (var bid in auction.Bids)
             {
                 NotifyIfExisting(UserAuction, bid.Bidder, sub =>
                 {
-                    NotificationService.Instance.NewBid(sub, auction, bid);
+                    NotificationService.NewBid(sub, auction, bid);
                 });
             }
         }
@@ -290,7 +295,7 @@ namespace Coflnet.Sky.Subscriptions
                         if (item.NotTriggerAgainBefore < DateTime.Now)
                             return;
                         item.NotTriggerAgainBefore = DateTime.Now + TimeSpan.FromHours(1);
-                        NotificationService.Instance.PriceAlert(item, info.ProductId, value);
+                        NotificationService.PriceAlert(item, info.ProductId, value);
                     }
                 }
             }
@@ -304,6 +309,8 @@ namespace Coflnet.Sky.Subscriptions
 
         public static TimeSpan BazzarNotificationBackoff = TimeSpan.FromHours(1);
         private IServiceScopeFactory scopeFactory;
+
+        public NotificationService NotificationService { get; }
 
         public void NotifyChange(string topic, SaveAuction auction)
         {
@@ -372,13 +379,9 @@ namespace Coflnet.Sky.Subscriptions
             var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
             // make sure all migrations are applied
             await context.Database.MigrateAsync();
-            
+
             await LoadFromDb();
-            await Task.Run(async () =>
-            {
-                while (!stoppingToken.IsCancellationRequested)
-                    await ProcessQueues();
-            });
+            await ProcessQueues(stoppingToken);
         }
 
         private struct SubLookup

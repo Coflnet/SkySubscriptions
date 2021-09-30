@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using Coflnet.Sky.Subscriptions.Models;
 using hypixel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -16,47 +17,49 @@ namespace Coflnet.Sky.Subscriptions
     /// </summary>
     public partial class NotificationService
     {
-        public static NotificationService Instance { get; set; }
-
         public static string BaseUrl = "https://sky.coflnet.com";
         public static string ItemIconsBase = "https://sky.shiiyu.moe/item";
         static string firebaseKey = SimplerConfig.Config.Instance["FIREBASE_KEY"];
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
 
-        static NotificationService()
+
+        public NotificationService(
+                    IServiceScopeFactory scopeFactory)
         {
-            Instance = new NotificationService();
+            this.scopeFactory = scopeFactory;
         }
 
 
         DoubleNotificationPreventer doubleChecker = new DoubleNotificationPreventer();
+        private IServiceScopeFactory scopeFactory;
 
         internal async Task Send(int userId, string title, string text, string url, string icon, object data = null)
         {
             var not = new Notification(title, text, url, icon, null, data);
             if (!doubleChecker.HasNeverBeenSeen(userId, not))
                 return;
-
+            
             try
             {
-                using (var context = new HypixelContext())
+
+                using var scope = scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
+                var devices = context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices);
+                foreach (var item in devices)
                 {
-                    var devices = context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices);
-                    foreach (var item in devices)
+                    Console.WriteLine("sending to " + item.UserId);
+                    var success = await TryNotifyAsync(item.Token, not);
+                    if (success)
                     {
-                        Console.WriteLine("sending to " + item.UserId);
-                        var success = await TryNotifyAsync(item.Token, not);
-                        if (success)
-                        {
-                            // store that was sent Notification
-                            return;
-                        }
-                        dev.Logger.Instance.Error("Sending pushnotification failed to");
-                        dev.Logger.Instance.Error(JsonConvert.SerializeObject(item));
-                        context.Remove(item);
+                        // store that was sent Notification
+                        return;
                     }
-                    await context.SaveChangesAsync();
+                    dev.Logger.Instance.Error("Sending pushnotification failed to");
+                    dev.Logger.Instance.Error(JsonConvert.SerializeObject(item));
+                    context.Remove(item);
                 }
+                await context.SaveChangesAsync();
+
             }
             catch (Exception)
             {
@@ -117,7 +120,7 @@ namespace Coflnet.Sky.Subscriptions
 
                 if (response.StatusCode != System.Net.HttpStatusCode.OK)
                 {
-                    Console.WriteLine(JsonConvert.SerializeObject(response));
+                    Console.WriteLine(JsonConvert.SerializeObject(response.Content));
                 }
 
                 dynamic res = JsonConvert.DeserializeObject(response.Content);
@@ -176,7 +179,7 @@ namespace Coflnet.Sky.Subscriptions
 
         internal Task NewAuction(Subscription sub, SaveAuction auction)
         {
-            return Send(sub.UserId, $"New auction",$"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+            return Send(sub.UserId, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
 
         private object FormatAuction(SaveAuction auction)

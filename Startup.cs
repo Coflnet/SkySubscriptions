@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Coflnet.Sky.Subscriptions.Models;
+using hypixel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Prometheus;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -53,8 +55,10 @@ namespace Coflnet.Sky.Subscriptions
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
-
-            services.AddHostedService<SubscribeEngine>();
+            services.AddSingleton<NotificationService>();
+            services.AddSingleton<SubscribeEngine>();
+            services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
+            services.AddJaeger();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -79,6 +83,7 @@ namespace Coflnet.Sky.Subscriptions
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapMetrics();
                 endpoints.MapControllers();
             });
         }
