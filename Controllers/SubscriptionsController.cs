@@ -6,6 +6,7 @@ using Coflnet.Sky.Subscriptions.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Coflnet.Sky.Subscriptions.Controllers
 {
@@ -86,7 +87,10 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         public async Task<Subscription> RemoveSubscription(string userId, [FromBody] Subscription subscription)
         {
             var user = await GetOrCreate(userId);
-            var sub = user.Subscriptions.Where(s=>s.Price == subscription.Price && s.Type == subscription.Type && s.TopicId == subscription.TopicId).FirstOrDefault();
+            Console.WriteLine(JsonConvert.SerializeObject(user));
+            Console.WriteLine(JsonConvert.SerializeObject(subscription));
+            var sub = user.Subscriptions.Where(s=>(s.Price == subscription.Price || subscription.Price == default)&& s.Type == subscription.Type && s.TopicId == subscription.TopicId).FirstOrDefault();
+            Console.WriteLine("Removing sub " + sub?.Id);
             if(sub == null)
                 return subscription;
             db.Subscriptions.Remove(sub);
