@@ -90,6 +90,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             if(sub == null)
                 return subscription;
             db.Subscriptions.Remove(sub);
+            user.Subscriptions.Remove(sub);
             db.Update(user);
             await db.SaveChangesAsync();
             await subEngine.Unsubscribe(sub);
