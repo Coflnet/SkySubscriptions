@@ -18,7 +18,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         private readonly SubsDbContext db;
         private readonly SubscribeEngine subEngine;
 
-        public SubscriptionController(ILogger<SubscriptionController> logger, 
+        public SubscriptionController(ILogger<SubscriptionController> logger,
             SubsDbContext context,
             SubscribeEngine engine)
         {
@@ -89,9 +89,9 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             var user = await GetOrCreate(userId);
             Console.WriteLine(JsonConvert.SerializeObject(user));
             Console.WriteLine(JsonConvert.SerializeObject(subscription));
-            var sub = user.Subscriptions.Where(s=>(s.Price == subscription.Price || subscription.Price == default)&& s.Type == subscription.Type && s.TopicId == subscription.TopicId).FirstOrDefault();
+            var sub = user.Subscriptions.Where(s => (s.Price == subscription.Price || subscription.Price == default) && s.Type == subscription.Type && s.TopicId == subscription.TopicId).FirstOrDefault();
             Console.WriteLine("Removing sub " + sub?.Id);
-            if(sub == null)
+            if (sub == null)
                 return subscription;
             db.Subscriptions.Remove(sub);
             user.Subscriptions.Remove(sub);
@@ -100,6 +100,27 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             await subEngine.Unsubscribe(sub);
 
             return subscription;
+        }
+
+        /// <summary>
+        /// Remove a subscription
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="subscription"></param>
+        /// <returns></returns>
+        [HttpDelete]
+        [Route("{userId}/sub/removeAll")]
+        public async void RemoveSubscriptions(string userId)
+        {
+            var user = await GetOrCreate(userId);
+            user.Subscriptions.ForEach(delegate (Subscription sub)
+            {
+                subEngine.Unsubscribe(sub);
+            });
+            db.Subscriptions.RemoveRange(user.Subscriptions);
+            user.Subscriptions = new List<Subscription>();
+            db.Update(user);
+            await db.SaveChangesAsync();
         }
     }
 }
