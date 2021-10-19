@@ -106,14 +106,13 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         /// Remove a subscription
         /// </summary>
         /// <param name="userId"></param>
-        /// <param name="subscription"></param>
         /// <returns></returns>
         [HttpDelete]
-        [Route("{userId}/sub/removeAll")]
+        [Route("{userId}/sub/all")]
         public async void RemoveSubscriptions(string userId)
         {
             var user = await GetOrCreate(userId);
-            user.Subscriptions.ForEach(delegate (Subscription sub)
+            user.Subscriptions.ForEach(sub =>
             {
                 subEngine.Unsubscribe(sub);
             });
