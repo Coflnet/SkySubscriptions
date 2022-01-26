@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
@@ -52,5 +53,8 @@ namespace Coflnet.Sky.Subscriptions.Models
         [JsonIgnore]
         public User User { get; set; }
         public int UserId { get; set; }
+
+        [MaxLength(200)]
+        public string Filter { get; set; }
     }
 }

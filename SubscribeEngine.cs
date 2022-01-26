@@ -9,6 +9,7 @@ using Confluent.Kafka;
 using dev;
 using hypixel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
@@ -41,15 +42,17 @@ namespace Coflnet.Sky.Subscriptions
         public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
 
         public static SubscribeEngine Instance { get; }
+        private IConfiguration config;
 
 
 
         public SubscribeEngine(
                     IServiceScopeFactory scopeFactory,
-                    NotificationService notificationService)
+                    NotificationService notificationService, IConfiguration config)
         {
             this.scopeFactory = scopeFactory;
             this.NotificationService = notificationService;
+            this.config = config;
         }
 
         ConsumerConfig conf = new ConsumerConfig
@@ -61,13 +64,16 @@ namespace Coflnet.Sky.Subscriptions
 
         public Task ProcessQueues(CancellationToken token)
         {
-            var topics = new string[] { Indexer.AuctionEndedTopic, Indexer.SoldAuctionTopic, Indexer.MissingAuctionsTopic };
+            var topics = new string[] {
+                config["TOPICS:AUCTION_ENDED"],
+                config["TOPICS:MISSING_AUCTION"],
+                config["TOPICS:SOLD_AUCTION"] };
             Console.WriteLine("consuming");
             return Task.WhenAny(
             Task.Run(() => ProcessSubscription<SaveAuction>(topics, BinSold, token)),
-            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { Indexer.NewAuctionsTopic }, NewAuction, token)),
-            Task.Run(() => ProcessSubscription<BazaarPull>(new string[] { BazaarIndexer.ConsumeTopic }, NewBazaar, token)),
-            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { Indexer.NewBidTopic }, NewBids, token)));
+            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_AUCTION"] }, NewAuction, token)),
+            Task.Run(() => ProcessSubscription<BazaarPull>(new string[] { config["TOPICS:BAZAAR"] }, NewBazaar, token)),
+            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_BID"] }, NewBids, token)));
         }
 
         private void ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
@@ -90,7 +96,7 @@ namespace Coflnet.Sky.Subscriptions
                         }
                         catch (ConsumeException e)
                         {
-                            dev.Logger.Instance.Error(e, "subscribe engine " + string.Join(",",topics));
+                            dev.Logger.Instance.Error(e, "subscribe engine " + string.Join(",", topics));
                         }
                     }
                 }
@@ -100,7 +106,7 @@ namespace Coflnet.Sky.Subscriptions
                     c.Close();
                 }
             }
-            Console.WriteLine("stopped listening " +  string.Join(",",topics));
+            Console.WriteLine("stopped listening " + string.Join(",", topics));
         }
 
         public void AddNew(Subscription subscription)

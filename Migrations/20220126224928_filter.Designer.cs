@@ -3,6 +3,7 @@ using System;
 using Coflnet.Sky.Subscriptions.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace SkySubscriptions.Migrations
 {
     [DbContext(typeof(SubsDbContext))]
-    partial class SubsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220126224928_filter")]
+    partial class filter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

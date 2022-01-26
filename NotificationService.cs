@@ -1,6 +1,6 @@
 using System;
 using System.Net.Http;
-using System.Text;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Linq;
@@ -9,6 +9,8 @@ using RestSharp;
 using Coflnet.Sky.Subscriptions.Models;
 using hypixel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Coflnet.Sky.Filter;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -21,10 +23,11 @@ namespace Coflnet.Sky.Subscriptions
         public static string ItemIconsBase = "https://sky.shiiyu.moe/item";
         static string firebaseKey = SimplerConfig.Config.Instance["FIREBASE_KEY"];
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
-
+        static FilterEngine filterEngine = new FilterEngine();
 
         public NotificationService(
-                    IServiceScopeFactory scopeFactory)
+                    IServiceScopeFactory scopeFactory,
+                    IConfiguration config)
         {
             this.scopeFactory = scopeFactory;
         }
@@ -172,6 +175,8 @@ namespace Coflnet.Sky.Subscriptions
 
         internal void AuctionPriceAlert(Subscription sub, SaveAuction auction)
         {
+            if(!Matches(auction,sub.Filter))
+                return;
             var text = $"New Auction for {auction.ItemName} for {auction.StartingBid}";
             Task.Run(() => Send(sub.UserId, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
@@ -179,6 +184,8 @@ namespace Coflnet.Sky.Subscriptions
 
         internal Task NewAuction(Subscription sub, SaveAuction auction)
         {
+            if(!Matches(auction,sub.Filter))
+                return Task.CompletedTask;
             return Send(sub.UserId, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
 
@@ -190,6 +197,13 @@ namespace Coflnet.Sky.Subscriptions
         string AuctionUrl(SaveAuction auction)
         {
             return BaseUrl + "/auction/" + auction.Uuid;
+        }
+        private bool Matches(SaveAuction auction, string filter)
+        {
+            if(string.IsNullOrEmpty(filter))
+                return true;
+            var filters = JsonConvert.DeserializeObject<Dictionary<string,string>>(filter);
+            return filterEngine.AddFilters(new SaveAuction[]{auction}.AsQueryable(),filters,false).Any();
         }
 
         string ItemIconUrl(string tag)
