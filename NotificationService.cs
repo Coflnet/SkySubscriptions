@@ -177,7 +177,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (!Matches(auction, sub.Filter))
                 return;
-            var text = $"New Auction for {auction.ItemName} for {String.Format("{0:n0}", auction.StartingBid)}";
+            var text = $"New Auction for {auction.ItemName} for {String.Format("{0:n0}", auction.StartingBid)} coins";
             Task.Run(() => Send(sub.UserId, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
