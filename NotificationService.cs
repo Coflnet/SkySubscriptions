@@ -41,7 +41,7 @@ namespace Coflnet.Sky.Subscriptions
             var not = new Notification(title, text, url, icon, null, data);
             if (!doubleChecker.HasNeverBeenSeen(userId, not))
                 return;
-            
+
             try
             {
 
@@ -175,16 +175,16 @@ namespace Coflnet.Sky.Subscriptions
 
         internal void AuctionPriceAlert(Subscription sub, SaveAuction auction)
         {
-            if(!Matches(auction,sub.Filter))
+            if (!Matches(auction, sub.Filter))
                 return;
-            var text = $"New Auction for {auction.ItemName} for {auction.StartingBid}";
+            var text = $"New Auction for {auction.ItemName} for {String.Format("{0:n0}", auction.StartingBid)}";
             Task.Run(() => Send(sub.UserId, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
 
         internal Task NewAuction(Subscription sub, SaveAuction auction)
         {
-            if(!Matches(auction,sub.Filter))
+            if (!Matches(auction, sub.Filter))
                 return Task.CompletedTask;
             return Send(sub.UserId, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
@@ -200,9 +200,9 @@ namespace Coflnet.Sky.Subscriptions
         }
         private bool Matches(SaveAuction auction, string filter)
         {
-            if(string.IsNullOrEmpty(filter))
+            if (string.IsNullOrEmpty(filter))
                 return true;
-            var filters = JsonConvert.DeserializeObject<Dictionary<string,string>>(filter);
+            var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter);
             return filterEngine.GetMatcher(filters)(auction);
         }
 
