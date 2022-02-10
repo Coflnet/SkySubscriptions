@@ -203,7 +203,7 @@ namespace Coflnet.Sky.Subscriptions
             if(string.IsNullOrEmpty(filter))
                 return true;
             var filters = JsonConvert.DeserializeObject<Dictionary<string,string>>(filter);
-            return filterEngine.AddFilters(new SaveAuction[]{auction}.AsQueryable(),filters,false).Any();
+            return filterEngine.GetMatcher(filters)(auction);
         }
 
         string ItemIconUrl(string tag)
