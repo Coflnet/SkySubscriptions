@@ -14,7 +14,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
     [Route("[controller]")]
     public class SubscriptionController : ControllerBase
     {
-        private readonly ILogger<SubscriptionController> _logger;
+        private readonly ILogger<SubscriptionController> logger;
         private readonly SubsDbContext db;
         private readonly SubscribeEngine subEngine;
 
@@ -22,7 +22,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             SubsDbContext context,
             SubscribeEngine engine)
         {
-            _logger = logger;
+            this.logger = logger;
             db = context;
             subEngine = engine;
         }
@@ -72,7 +72,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             user.Subscriptions.Add(subscription);
             await db.SaveChangesAsync();
             this.subEngine.AddNew(subscription);
-
+            logger.LogInformation($"New subscription {subscription.TopicId}");
             return subscription;
         }
 
