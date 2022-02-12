@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Coflnet.Kafka;
 using Coflnet.Sky.Subscriptions.Models;
 using Confluent.Kafka;
 using dev;
@@ -81,37 +82,17 @@ namespace Coflnet.Sky.Subscriptions
             Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_BID"] }, NewBids, token)));
         }
 
-        private void ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
+        private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
         {
-            using (var c = new ConsumerBuilder<Ignore, T>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<T>()).Build())
-            {
-                c.Subscribe(topics);
-                try
+            return KafkaConsumer.ConsumeBatch<T>(KafkaHost, topics, (batch)=>{
+                foreach (var item in batch)
                 {
-                    while (true)
-                    {
-                        try
-                        {
-                            var cr = c.Consume(token);
-                            if (cr == null)
-                                continue;
-                            handler(cr.Message.Value);
-                            consumeCount.Inc();
-                            // tell kafka that we stored the batch
-                            c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
-                        }
-                        catch (ConsumeException e)
-                        {
-                            dev.Logger.Instance.Error(e, "subscribe engine " + string.Join(",", topics));
-                        }
-                    }
+                    handler(item);
                 }
-                catch (OperationCanceledException)
-                {
-                    // Ensure the consumer leaves the group cleanly and final offsets are committed.
-                    c.Close();
-                }
-            }
+                consumeCount.Inc(batch.Count());
+                return Task.CompletedTask;
+            }, token, "sky-sub-engine", 100);
+            
             Console.WriteLine("stopped listening " + string.Join(",", topics));
         }
 
@@ -212,6 +193,8 @@ namespace Coflnet.Sky.Subscriptions
         /// <param name="auction"></param>
         public void NewAuction(SaveAuction auction)
         {
+            if (auction.Start < DateTime.Now - TimeSpan.FromHours(2))
+                return; // to old
             if (this.PriceUpdate.TryGetValue(auction.Tag, out ConcurrentBag<Subscription> subscribers))
             {
                 foreach (var item in subscribers)

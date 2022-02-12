@@ -11,6 +11,7 @@ using hypixel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Coflnet.Sky.Filter;
+using Microsoft.Extensions.Logging;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -24,12 +25,14 @@ namespace Coflnet.Sky.Subscriptions
         static string firebaseKey = SimplerConfig.Config.Instance["FIREBASE_KEY"];
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
         static FilterEngine filterEngine = new FilterEngine();
+        private ILogger<NotificationService> logger;
 
         public NotificationService(
                     IServiceScopeFactory scopeFactory,
-                    IConfiguration config)
+                    IConfiguration config, ILogger<NotificationService> logger)
         {
             this.scopeFactory = scopeFactory;
+            this.logger = logger;
         }
 
 
@@ -44,7 +47,7 @@ namespace Coflnet.Sky.Subscriptions
 
             try
             {
-
+                logger.LogInformation($"Sedning Notification to {userId}\n{title}\n{text}\n{url}");
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
                 var devices = context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices);
