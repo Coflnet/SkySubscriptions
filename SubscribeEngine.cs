@@ -38,6 +38,11 @@ namespace Coflnet.Sky.Subscriptions
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> AuctionSub = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> UserAuction = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
 
+        private static Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_consume", "The total amount of consumed messages");
+        private static Prometheus.Counter auctionCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_new_auction", "How many new auctions were consumed");
+        private static Prometheus.Counter bidCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_new_bid", "How many new bids were consumed");
+        private static Prometheus.Counter bazaarCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_bazaar", "How many bazaar updates were consumed");
+
 
         public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
 
@@ -91,6 +96,7 @@ namespace Coflnet.Sky.Subscriptions
                             if (cr == null)
                                 continue;
                             handler(cr.Message.Value);
+                            consumeCount.Inc();
                             // tell kafka that we stored the batch
                             c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
                         }
@@ -197,6 +203,7 @@ namespace Coflnet.Sky.Subscriptions
             {
                 PriceState(item);
             }
+            bazaarCount.Inc();
         }
 
         /// <summary>
@@ -222,6 +229,7 @@ namespace Coflnet.Sky.Subscriptions
                     NotificationService.NewAuction(item, auction);
                 }
             }
+            auctionCount.Inc();
         }
 
         /// <summary>
@@ -276,6 +284,7 @@ namespace Coflnet.Sky.Subscriptions
                     NotificationService.NewBid(sub, auction, bid);
                 });
             }
+            bidCount.Inc();
         }
 
 
