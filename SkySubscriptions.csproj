@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
+    <GenerateProgramFile>false</GenerateProgramFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>1591</NoWarn>
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
@@ -10,6 +11,15 @@
   <ItemGroup>
     <ProjectReference Include="../dev/hypixel.csproj" />
     <ProjectReference Include="../SkyFilter/SkyFilter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="**\*.Tests.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Release'">
+    <PackageReference Include="nunit" Version="3.13.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
   </ItemGroup>
 
   <ItemGroup>

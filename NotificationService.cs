@@ -15,10 +15,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Coflnet.Sky.Subscriptions
 {
+    public interface INotificationService
+    {
+        void AuctionOver(Subscription sub, SaveAuction auction);
+        void AuctionPriceAlert(Subscription sub, SaveAuction auction);
+        Task NewAuction(Subscription sub, SaveAuction auction);
+        void NewBid(Subscription sub, SaveAuction auction, SaveBids bid);
+        void Outbid(Subscription sub, SaveAuction auction, SaveBids bid);
+        void PriceAlert(Subscription sub, string productId, double value);
+        void Sold(Subscription sub, SaveAuction auction);
+        Task<bool> TryNotifyAsync(string to, NotificationService.Notification notification);
+    }
+
     /// <summary>
     /// Sends firebase push notifications
     /// </summary>
-    public partial class NotificationService
+    public partial class NotificationService : INotificationService
     {
         public static string BaseUrl = "https://sky.coflnet.com";
         public static string ItemIconsBase = "https://sky.shiiyu.moe/item";
@@ -145,7 +157,7 @@ namespace Coflnet.Sky.Subscriptions
             return false;
         }
 
-        internal void Sold(Subscription sub, SaveAuction auction)
+        public void Sold(Subscription sub, SaveAuction auction)
         {
             var text = $"{auction.ItemName} was sold to {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
             Task.Run(() => Send(sub.UserId, "Item Sold", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
@@ -164,19 +176,19 @@ namespace Coflnet.Sky.Subscriptions
             Task.Run(() => Send(sub.UserId, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), auction)).ConfigureAwait(false);
         }
 
-        internal void AuctionOver(Subscription sub, SaveAuction auction)
+        public void AuctionOver(Subscription sub, SaveAuction auction)
         {
             var text = $"Highest bid is {auction.HighestBidAmount}";
             Task.Run(() => Send(sub.UserId, $"Auction for {auction.ItemName} ended", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
-        internal void PriceAlert(Subscription sub, string productId, double value)
+        public void PriceAlert(Subscription sub, string productId, double value)
         {
             var text = $"{ItemDetails.TagToName(productId)} reached {value.ToString("0.00")}";
             Task.Run(() => Send(sub.UserId, $"Price Alert", text, $"{BaseUrl}/item/{productId}", ItemIconUrl(productId))).ConfigureAwait(false);
         }
 
-        internal void AuctionPriceAlert(Subscription sub, SaveAuction auction)
+        public void AuctionPriceAlert(Subscription sub, SaveAuction auction)
         {
             if (!Matches(auction, sub.Filter))
                 return;
@@ -185,7 +197,7 @@ namespace Coflnet.Sky.Subscriptions
         }
 
 
-        internal Task NewAuction(Subscription sub, SaveAuction auction)
+        public Task NewAuction(Subscription sub, SaveAuction auction)
         {
             if (!Matches(auction, sub.Filter))
                 return Task.CompletedTask;

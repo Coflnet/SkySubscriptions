@@ -55,7 +55,7 @@ namespace Coflnet.Sky.Subscriptions
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
-            services.AddSingleton<NotificationService>();
+            services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<SubscribeEngine>();
             services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
             services.AddJaeger();

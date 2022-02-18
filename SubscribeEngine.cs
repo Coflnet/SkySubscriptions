@@ -17,8 +17,6 @@ using Newtonsoft.Json;
 
 namespace Coflnet.Sky.Subscriptions
 {
-
-
     public class SubscribeEngine : BackgroundService
     {
         /// <summary>
@@ -54,7 +52,7 @@ namespace Coflnet.Sky.Subscriptions
 
         public SubscribeEngine(
                     IServiceScopeFactory scopeFactory,
-                    NotificationService notificationService, IConfiguration config)
+                    INotificationService notificationService, IConfiguration config)
         {
             this.scopeFactory = scopeFactory;
             this.NotificationService = notificationService;
@@ -143,6 +141,7 @@ namespace Coflnet.Sky.Subscriptions
                 AddSubscription(item);
             }
             Console.WriteLine($"Loaded {all.Count()} subscriptions");
+            Console.WriteLine($"{PriceUpdate.Count} price alerts, {UserAuction.Count} user alerts");
         }
 
         private void AddSubscription(Subscription item)
@@ -308,7 +307,7 @@ namespace Coflnet.Sky.Subscriptions
         public static TimeSpan BazzarNotificationBackoff = TimeSpan.FromHours(1);
         private IServiceScopeFactory scopeFactory;
 
-        public NotificationService NotificationService { get; }
+        public INotificationService NotificationService { get; }
 
         public void NotifyChange(string topic, SaveAuction auction)
         {
