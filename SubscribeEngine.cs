@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Coflnet.Sky.Subscriptions
@@ -47,16 +48,18 @@ namespace Coflnet.Sky.Subscriptions
 
         public static SubscribeEngine Instance { get; }
         private IConfiguration config;
+        private ILogger<SubscribeEngine> logger;
 
 
 
         public SubscribeEngine(
                     IServiceScopeFactory scopeFactory,
-                    INotificationService notificationService, IConfiguration config)
+                    INotificationService notificationService, IConfiguration config, ILogger<SubscribeEngine> logger)
         {
             this.scopeFactory = scopeFactory;
             this.NotificationService = notificationService;
             this.config = config;
+            this.logger = logger;
         }
 
         ConsumerConfig conf = new ConsumerConfig
@@ -82,15 +85,23 @@ namespace Coflnet.Sky.Subscriptions
 
         private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
         {
-            return KafkaConsumer.ConsumeBatch<T>(KafkaHost, topics, (batch)=>{
+            return KafkaConsumer.ConsumeBatch<T>(KafkaHost, topics, (batch) =>
+            {
                 foreach (var item in batch)
                 {
-                    handler(item);
+                    try
+                    {
+                        handler(item);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, "processing new " + topics[0]);
+                    }
                 }
                 consumeCount.Inc(batch.Count());
                 return Task.CompletedTask;
             }, token, "sky-sub-engine", 100);
-            
+
             Console.WriteLine("stopped listening " + string.Join(",", topics));
         }
 
@@ -198,9 +209,10 @@ namespace Coflnet.Sky.Subscriptions
             {
                 foreach (var item in subscribers)
                 {
-                    if ((auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN)
-                        || auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN))
-                        && (!item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin))
+                    var isLower = auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN);
+                    var isHigher = auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN);
+                    var isBinIfRequired = (!item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin);
+                    if ((isLower || isHigher) && isBinIfRequired)
                         NotificationService.AuctionPriceAlert(item, auction);
                 }
             }
