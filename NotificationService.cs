@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using Coflnet.Sky.Subscriptions.Models;
-using hypixel;
+using Coflnet.Sky.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Coflnet.Sky.Filter;

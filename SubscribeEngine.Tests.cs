@@ -1,3 +1,4 @@
+using Coflnet.Sky.Core;
 using Coflnet.Sky.Subscriptions.Models;
 using Moq;
 using NUnit.Framework;
@@ -18,7 +19,7 @@ namespace Coflnet.Sky.Subscriptions
                 Type = Subscription.SubType.BIN | Subscription.SubType.PRICE_HIGHER_THAN,
                 TopicId = "ASPECT"
             };
-            var auction = new hypixel.SaveAuction()
+            var auction = new SaveAuction()
             {
                 StartingBid = 5,
                 Tag = "ASPECT",

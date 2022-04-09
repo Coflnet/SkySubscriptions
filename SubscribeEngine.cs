@@ -8,7 +8,7 @@ using Coflnet.Kafka;
 using Coflnet.Sky.Subscriptions.Models;
 using Confluent.Kafka;
 using dev;
-using hypixel;
+using Coflnet.Sky.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
