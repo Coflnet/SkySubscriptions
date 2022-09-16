@@ -143,7 +143,7 @@ namespace Coflnet.Sky.Subscriptions
         public async Task LoadFromDb()
         {
             using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
+            using var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
 
             var minTime = DateTime.Now.Subtract(TimeSpan.FromDays(200));
             var all = context.Subscriptions.Where(si => si.GeneratedAt > minTime);
@@ -384,11 +384,12 @@ namespace Coflnet.Sky.Subscriptions
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
-            // make sure all migrations are applied
-            await context.Database.MigrateAsync();
-
+            using (var scope = scopeFactory.CreateScope()) ;
+            using (var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>())
+            {
+                // make sure all migrations are applied
+                await context.Database.MigrateAsync();
+            }
             await LoadFromDb();
             await ProcessQueues(stoppingToken);
         }
