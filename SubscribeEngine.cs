@@ -384,7 +384,7 @@ namespace Coflnet.Sky.Subscriptions
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using (var scope = scopeFactory.CreateScope()) ;
+            using (var scope = scopeFactory.CreateScope())
             using (var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>())
             {
                 // make sure all migrations are applied

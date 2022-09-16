@@ -31,11 +31,13 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         [Route("{userId}")]
         public async Task<User> GetOrCreate(string userId)
         {
-            var user = await db.Users.Where(u => u.ExternalId == userId).Include(u => u.Subscriptions).Include(u => u.Devices).FirstOrDefaultAsync();
+            var user = await db.Users.Where(u => u.ExternalId == userId).Include(u => u.Subscriptions).Include(u => u.Devices).AsSplitQuery().FirstOrDefaultAsync();
             if (user == null)
             {
                 user = new User() { ExternalId = userId };
                 db.Users.Add(user);
+                user.Subscriptions = new();
+                user.Devices = new();
                 await db.SaveChangesAsync();
             }
             return user;
@@ -114,7 +116,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         /// <returns></returns>
         [HttpDelete]
         [Route("{userId}/sub/all")]
-        public async void RemoveSubscriptions(string userId)
+        public async Task RemoveSubscriptions(string userId)
         {
             var user = await GetOrCreate(userId);
             user.Subscriptions.ForEach(sub =>
