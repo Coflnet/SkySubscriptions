@@ -218,15 +218,16 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (string.IsNullOrEmpty(filter))
                 return true;
+            var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter);
             try
             {
-                var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter);
                 return filterEngine.GetMatcher(filters)(auction);
             }
             catch (System.Exception e)
             {
-                logger.LogError(e, $"Could not match filter {filter} on {JsonConvert.SerializeObject(auction)}");
-                throw;
+                logger.LogError(e, $"Could not match filter {filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
+                auction.NBTLookup = NBT.CreateLookup(auction);
+                return filterEngine.GetMatcher(filters)(auction);
             }
         }
 
