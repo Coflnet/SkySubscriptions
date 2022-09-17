@@ -59,10 +59,11 @@ namespace Coflnet.Sky.Subscriptions
 
             try
             {
-                logger.LogInformation($"Sedning Notification to {userId}\n{title}\n{text}\n{url}");
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
-                var devices = context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices);
+                var devices = await context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices).ToListAsync();
+                if (devices.Count > 0)
+                    logger.LogInformation($"Sedning Notification to {userId}: {title}\n{text} {url}");
                 foreach (var item in devices)
                 {
                     Console.WriteLine("sending to " + item.UserId);
