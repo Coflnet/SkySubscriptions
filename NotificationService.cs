@@ -127,14 +127,13 @@ namespace Coflnet.Sky.Subscriptions
 
                        var response = await client.ExecuteAsync(request);*/
 
-                var client = new RestClient("https://fcm.googleapis.com/fcm/send");
-                client.Timeout = -1;
-                var request = new RestRequest(Method.POST);
+                var client = new RestClient("https://fcm.googleapis.com");
+                var request = new RestRequest("fcm/send", Method.Post);
 
                 request.AddHeader("Authorization", serverKey);
                 request.AddHeader("Sender", senderId); request.AddHeader("Content-Type", "application/json");
                 request.AddParameter("application/json", jsonBody, ParameterType.RequestBody);
-                IRestResponse response = await client.ExecuteAsync(request);
+                var response = await client.ExecuteAsync(request);
 
 
                 if (response.StatusCode != System.Net.HttpStatusCode.OK)
