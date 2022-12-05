@@ -74,7 +74,7 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             user.Subscriptions.Add(subscription);
             await db.SaveChangesAsync();
             this.subEngine.AddNew(subscription);
-            logger.LogInformation($"New subscription {subscription.TopicId}");
+            logger.LogInformation($"New subscription {subscription.TopicId} with filter {subscription.Filter} for user {userId} added");
             return subscription;
         }
 
