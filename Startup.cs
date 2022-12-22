@@ -58,7 +58,7 @@ namespace Coflnet.Sky.Subscriptions
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<SubscribeEngine>();
             services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
-            services.AddJaeger();
+            services.AddJaeger(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
