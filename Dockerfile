@@ -22,4 +22,3 @@ USER app
 ENTRYPOINT ["dotnet", "SkySubscriptions.dll", "--hostBuilder:reloadConfigOnChange=false"]
 
 VOLUME /data
-
