@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Coflnet.Sky.Filter;
 using Microsoft.Extensions.Logging;
+using Confluent.Kafka;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -38,6 +39,8 @@ namespace Coflnet.Sky.Subscriptions
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
         static FilterEngine filterEngine = new FilterEngine();
         private ILogger<NotificationService> logger;
+        private IProducer<string, string> producer;
+        private IConfiguration config;
 
         public NotificationService(
                     IServiceScopeFactory scopeFactory,
@@ -45,6 +48,13 @@ namespace Coflnet.Sky.Subscriptions
         {
             this.scopeFactory = scopeFactory;
             this.logger = logger;
+            this.config = config;
+
+            producer = new ProducerBuilder<string, string>(new Confluent.Kafka.ProducerConfig
+            {
+                BootstrapServers = config["KAFKA_HOST"],
+                ClientId = "NotificationService"
+            }).Build();
         }
 
 
@@ -71,13 +81,18 @@ namespace Coflnet.Sky.Subscriptions
                     if (success)
                     {
                         // store that was sent Notification
-                        return;
+                        continue;
                     }
                     dev.Logger.Instance.Error("Sending pushnotification failed to");
                     dev.Logger.Instance.Error(JsonConvert.SerializeObject(item));
                     context.Remove(item);
                 }
                 await context.SaveChangesAsync();
+                await producer.ProduceAsync(config["TOPICS:NOTIFICATIONS"], new Message<string, string>
+                {
+                    Key = userId.ToString(),
+                    Value = JsonConvert.SerializeObject(not)
+                });
 
             }
             catch (Exception)
