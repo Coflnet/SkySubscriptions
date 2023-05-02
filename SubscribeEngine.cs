@@ -85,7 +85,7 @@ namespace Coflnet.Sky.Subscriptions
 
         private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
         {
-            return KafkaConsumer.ConsumeBatch<T>(KafkaHost, topics, (batch) =>
+            return KafkaConsumer.ConsumeBatch<T>(config, topics, (batch) =>
             {
                 foreach (var item in batch)
                 {
