@@ -57,6 +57,7 @@ namespace Coflnet.Sky.Subscriptions
             );
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<SubscribeEngine>();
+            services.AddSingleton<Kafka.KafkaCreator>();
             services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
             services.AddJaeger(Configuration);
         }

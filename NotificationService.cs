@@ -44,17 +44,14 @@ namespace Coflnet.Sky.Subscriptions
 
         public NotificationService(
                     IServiceScopeFactory scopeFactory,
-                    IConfiguration config, ILogger<NotificationService> logger)
+                    IConfiguration config, ILogger<NotificationService> logger,
+                    Kafka.KafkaCreator kafkaCreator)
         {
             this.scopeFactory = scopeFactory;
             this.logger = logger;
             this.config = config;
-
-            producer = new ProducerBuilder<string, string>(new Confluent.Kafka.ProducerConfig
-            {
-                BootstrapServers = config["KAFKA_HOST"],
-                ClientId = "NotificationService"
-            }).Build();
+            _ = kafkaCreator.CreateTopicIfNotExist(config["TOPICS:NOTIFICATIONS"]);
+            producer = kafkaCreator.BuildProducer<string, string>(false);
         }
 
 

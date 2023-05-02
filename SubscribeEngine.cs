@@ -44,8 +44,6 @@ namespace Coflnet.Sky.Subscriptions
         private static Prometheus.Counter bazaarCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_bazaar", "How many bazaar updates were consumed");
 
 
-        public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
-
         public static SubscribeEngine Instance { get; }
         private IConfiguration config;
         private ILogger<SubscribeEngine> logger;
@@ -61,13 +59,6 @@ namespace Coflnet.Sky.Subscriptions
             this.config = config;
             this.logger = logger;
         }
-
-        ConsumerConfig conf = new ConsumerConfig
-        {
-            GroupId = "sky-sub-engine",
-            BootstrapServers = KafkaHost,
-            AutoOffsetReset = AutoOffsetReset.Earliest
-        };
 
         public Task ProcessQueues(CancellationToken token)
         {
