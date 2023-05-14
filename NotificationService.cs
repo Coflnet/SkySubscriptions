@@ -58,8 +58,9 @@ namespace Coflnet.Sky.Subscriptions
         DoubleNotificationPreventer doubleChecker = new DoubleNotificationPreventer();
         private IServiceScopeFactory scopeFactory;
 
-        internal async Task Send(int userId, string title, string text, string url, string icon, object data = null)
+        internal async Task Send(Subscription sub, string title, string text, string url, string icon, Dictionary<string,string> data = null)
         {
+            var userId = sub.UserId;
             var not = new Notification(title, text, url, icon, null, data);
             if (!doubleChecker.HasNeverBeenSeen(userId, not))
                 return;
@@ -85,6 +86,8 @@ namespace Coflnet.Sky.Subscriptions
                     context.Remove(item);
                 }
                 await context.SaveChangesAsync();
+                not.data["userId"] = userId.ToString();
+                not.data["subId"] = sub.Id.ToString();
                 await producer.ProduceAsync(config["TOPICS:NOTIFICATIONS"], new Message<string, string>
                 {
                     Key = userId.ToString(),
@@ -172,32 +175,32 @@ namespace Coflnet.Sky.Subscriptions
         public void Sold(Subscription sub, SaveAuction auction)
         {
             var text = $"{auction.ItemName} was sold to {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub.UserId, "Item Sold", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, "Item Sold", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void Outbid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
             var outBidBy = auction.HighestBidAmount - bid.Amount;
             var text = $"You were outbid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} by {outBidBy}";
-            Task.Run(() => Send(sub.UserId, "Outbid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, "Outbid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void NewBid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
             var text = $"New bid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub.UserId, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), auction)).ConfigureAwait(false);
+            Task.Run(() => Send(sub, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), auction)).ConfigureAwait(false);
         }
 
         public void AuctionOver(Subscription sub, SaveAuction auction)
         {
             var text = $"Highest bid is {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub.UserId, $"Auction for {auction.ItemName} ended", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, $"Auction for {auction.ItemName} ended", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void PriceAlert(Subscription sub, string productId, double value)
         {
             var text = $"{ItemDetails.TagToName(productId)} reached {value.ToString("0.00")}";
-            Task.Run(() => Send(sub.UserId, $"Price Alert", text, $"{BaseUrl}/item/{productId}", ItemIconUrl(productId))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, $"Price Alert", text, $"{BaseUrl}/item/{productId}", ItemIconUrl(productId))).ConfigureAwait(false);
         }
 
         public void AuctionPriceAlert(Subscription sub, SaveAuction auction)
@@ -205,7 +208,7 @@ namespace Coflnet.Sky.Subscriptions
             if (!Matches(auction, sub.Filter))
                 return;
             var text = $"New Auction for {auction.ItemName} for {String.Format("{0:n0}", auction.StartingBid)} coins";
-            Task.Run(() => Send(sub.UserId, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
 
@@ -213,12 +216,12 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (!Matches(auction, sub.Filter))
                 return Task.CompletedTask;
-            return Send(sub.UserId, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+            return Send(sub, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
 
-        private object FormatAuction(SaveAuction auction)
+        private Dictionary<string, string> FormatAuction(SaveAuction auction)
         {
-            return new { type = "auction", auction = JsonConvert.SerializeObject(auction) };
+            return new() { { "type", "auction" }, { "auction", JsonConvert.SerializeObject(auction) } };
         }
 
         string AuctionUrl(SaveAuction auction)

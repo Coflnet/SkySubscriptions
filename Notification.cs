@@ -9,13 +9,13 @@ namespace Coflnet.Sky.Subscriptions
         {
             public string title;
             [JsonIgnore]
-            public object data;
+            public Dictionary<string,string> data;
             public string click_action;
             public string icon;
             public string image;
             public string body;
 
-            public Notification(string title, string body, string click_action, string icon, string image, object data)
+            public Notification(string title, string body, string click_action, string icon, string image, Dictionary<string,string> data)
             {
                 this.title = title;
                 this.data = data;
