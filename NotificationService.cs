@@ -188,7 +188,7 @@ namespace Coflnet.Sky.Subscriptions
         public void NewBid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
             var text = $"New bid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), auction)).ConfigureAwait(false);
+            Task.Run(() => Send(sub, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void AuctionOver(Subscription sub, SaveAuction auction)
