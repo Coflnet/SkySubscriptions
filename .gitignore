@@ -1,3 +1,5 @@
 bin
 obj
 .vscode/
+Client/out
+Client/*.nupkg

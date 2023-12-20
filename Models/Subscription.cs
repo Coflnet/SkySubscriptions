@@ -9,7 +9,6 @@ namespace Coflnet.Sky.Subscriptions.Models
     public class Subscription
     {
         [IgnoreDataMember]
-        [JsonIgnore]
         public int Id { get; set; }
         /// <summary>
         /// Either User,auction or ItemId UserIds are +100.000
@@ -33,14 +32,19 @@ namespace Coflnet.Sky.Subscriptions.Models
         public enum SubType
         {
             NONE = 0,
-            PRICE_LOWER_THAN = 1,
-            PRICE_HIGHER_THAN = 2,
+            PriceLowerThan = 1,
+            PriceHigherThan = 2,
             OUTBID = 4,
             SOLD = 8,
             BIN = 16,
-            USE_SELL_NOT_BUY = 32,
+            UseSellNotBuy = 32,
             AUCTION = 64,
-            PLAYER = 128
+            PLAYER = 128,
+            UNDERCUT = 256,
+            /// <summary>
+            /// Use flip filter
+            /// </summary>
+            FILTER = 512,
         }
 
         [DataMember(Name = "type")]

@@ -129,19 +129,6 @@ namespace Coflnet.Sky.Subscriptions
 
                 // Using Newtonsoft.Json
                 var jsonBody = JsonConvert.SerializeObject(payload);
-
-                /*       var client = new RestClient();
-                       var request = new RestRequest("https://fcm.googleapis.com/fcm/send", Method.POST);
-                       Console.WriteLine("y");
-                       request.AddHeader("Authorization", serverKey);
-                       request.AddHeader("Sender", senderId);
-                       request.AddJsonBody(payload);
-                       Console.WriteLine(jsonBody);
-                       Console.WriteLine(serverKey);
-                      //Console.WriteLine(JsonConvert.SerializeObject(request));
-
-                       var response = await client.ExecuteAsync(request);*/
-
                 var client = new RestClient("https://fcm.googleapis.com");
                 var request = new RestRequest("fcm/send", Method.Post);
 

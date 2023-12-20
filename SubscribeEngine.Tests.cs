@@ -16,7 +16,7 @@ namespace Coflnet.Sky.Subscriptions
             var sub = new Subscription()
             {
                 Price = 1,
-                Type = Subscription.SubType.BIN | Subscription.SubType.PRICE_HIGHER_THAN,
+                Type = Subscription.SubType.BIN | Subscription.SubType.PriceHigherThan,
                 TopicId = "ASPECT"
             };
             var auction = new SaveAuction()

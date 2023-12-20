@@ -70,10 +70,12 @@ namespace Coflnet.Sky.Subscriptions.Controllers
         [Route("{userId}/sub")]
         public async Task<Subscription> AddSubscription(string userId, [FromBody] Subscription subscription)
         {
+            if (subscription.Id != 0)
+                throw new Core.CoflnetException("id_present", "New subscriptions can't have an id");
             var user = await GetOrCreate(userId);
             user.Subscriptions.Add(subscription);
             await db.SaveChangesAsync();
-            this.subEngine.AddNew(subscription);
+            subEngine.AddNew(subscription);
             logger.LogInformation($"New subscription {subscription.TopicId} with filter {subscription.Filter} for user {userId} added");
             return subscription;
         }

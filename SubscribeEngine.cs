@@ -103,7 +103,7 @@ namespace Coflnet.Sky.Subscriptions
 
         public Task Unsubscribe(Subscription subs)
         {
-            if (subs.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN) || subs.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN))
+            if (subs.Type.HasFlag(Subscription.SubType.PriceHigherThan) || subs.Type.HasFlag(Subscription.SubType.PriceLowerThan))
                 RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, PriceUpdate);
             if (subs.Type.HasFlag(Subscription.SubType.SOLD))
                 RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, Sold);
@@ -156,7 +156,7 @@ namespace Coflnet.Sky.Subscriptions
             {
                 AddSubscription(item, Sold);
             }
-            else if (item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN) || item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN))
+            else if (item.Type.HasFlag(Subscription.SubType.PriceLowerThan) || item.Type.HasFlag(Subscription.SubType.PriceHigherThan))
             {
                 AddSubscription(item, PriceUpdate);
             }
@@ -200,8 +200,8 @@ namespace Coflnet.Sky.Subscriptions
             {
                 foreach (var item in subscribers)
                 {
-                    var isLower = auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN);
-                    var isHigher = auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN);
+                    var isLower = auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PriceLowerThan);
+                    var isHigher = auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PriceHigherThan);
                     var isBinIfRequired = (!item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin);
                     if ((isLower || isHigher) && isBinIfRequired)
                         NotificationService.AuctionPriceAlert(item, auction);
@@ -287,10 +287,10 @@ namespace Coflnet.Sky.Subscriptions
                     if (item.NotTriggerAgainBefore > DateTime.Now)
                         continue;
                     var value = info.QuickStatus.BuyPrice;
-                    if (item.Type.HasFlag(Subscription.SubType.USE_SELL_NOT_BUY))
+                    if (item.Type.HasFlag(Subscription.SubType.UseSellNotBuy))
                         value = info.QuickStatus.SellPrice;
-                    if (value < item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_LOWER_THAN)
-                         || value > item.Price && item.Type.HasFlag(Subscription.SubType.PRICE_HIGHER_THAN))
+                    if (value < item.Price && item.Type.HasFlag(Subscription.SubType.PriceLowerThan)
+                         || value > item.Price && item.Type.HasFlag(Subscription.SubType.PriceHigherThan))
                     {
                         if (item.NotTriggerAgainBefore < DateTime.Now)
                             return;
