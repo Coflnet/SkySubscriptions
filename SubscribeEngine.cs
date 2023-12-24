@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Coflnet.Sky.Commands.Shared;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -23,20 +24,21 @@ namespace Coflnet.Sky.Subscriptions
         /// <summary>
         /// Subscriptions for being outbid
         /// </summary>
-        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> outbid = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
+        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> OutbidSubs = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         /// <summary>
         /// Subscriptions for ended auctions
         /// </summary>
-        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> Sold = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
+        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> SoldSubs = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         /// <summary>
         /// Subscriptions for new auction/bazaar prices
         /// </summary>
-        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> PriceUpdate = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
+        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> PriceUpdateSubs = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         /// <summary>
         /// All subscrptions to a specific auction
         /// </summary>
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> AuctionSub = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> UserAuction = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
+        private ConcurrentDictionary<string, (Subscription,SelfUpdatingValue<FlipSettings>)> FlipFilters = new ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)>();
 
         private static Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_consume", "The total amount of consumed messages");
         private static Prometheus.Counter auctionCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_new_auction", "How many new auctions were consumed");
@@ -104,11 +106,11 @@ namespace Coflnet.Sky.Subscriptions
         public Task Unsubscribe(Subscription subs)
         {
             if (subs.Type.HasFlag(Subscription.SubType.PriceHigherThan) || subs.Type.HasFlag(Subscription.SubType.PriceLowerThan))
-                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, PriceUpdate);
+                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, PriceUpdateSubs);
             if (subs.Type.HasFlag(Subscription.SubType.SOLD))
-                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, Sold);
+                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, SoldSubs);
             if (subs.Type.HasFlag(Subscription.SubType.OUTBID))
-                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, outbid);
+                RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, OutbidSubs);
             if (subs.Type.HasFlag(Subscription.SubType.AUCTION))
                 RemoveSubscriptionFromCache(subs.UserId, subs.TopicId, subs.Type, AuctionSub);
             return Task.CompletedTask;
@@ -137,28 +139,28 @@ namespace Coflnet.Sky.Subscriptions
             using var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
 
             var minTime = DateTime.Now.Subtract(TimeSpan.FromDays(200));
-            var all = context.Subscriptions.Where(si => si.GeneratedAt > minTime);
+            var all = context.Subscriptions.Where(si => si.GeneratedAt > minTime).Include(s=>s.User);
             foreach (var item in all)
             {
                 AddSubscription(item);
             }
             Console.WriteLine($"Loaded {all.Count()} subscriptions");
-            Console.WriteLine($"{PriceUpdate.Count} price alerts, {UserAuction.Count} user alerts");
+            Console.WriteLine($"{PriceUpdateSubs.Count} price alerts, {UserAuction.Count} user alerts");
         }
 
         private void AddSubscription(Subscription item)
         {
             if (item.Type.HasFlag(Subscription.SubType.OUTBID))
             {
-                AddSubscription(item, outbid);
+                AddSubscription(item, OutbidSubs);
             }
             else if (item.Type.HasFlag(Subscription.SubType.SOLD))
             {
-                AddSubscription(item, Sold);
+                AddSubscription(item, SoldSubs);
             }
             else if (item.Type.HasFlag(Subscription.SubType.PriceLowerThan) || item.Type.HasFlag(Subscription.SubType.PriceHigherThan))
             {
-                AddSubscription(item, PriceUpdate);
+                AddSubscription(item, PriceUpdateSubs);
             }
             else if (item.Type.HasFlag(Subscription.SubType.AUCTION))
             {
@@ -167,6 +169,26 @@ namespace Coflnet.Sky.Subscriptions
             else if (item.Type.HasFlag(Subscription.SubType.PLAYER))
             {
                 AddSubscription(item, UserAuction);
+            }
+            else if(item.Type.HasFlag(Subscription.SubType.FILTER))
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        var filter = await SelfUpdatingValue<FlipSettings>.Create(item.User.ExternalId, "flipSettings");
+                        filter.OnChange += (f) =>
+                        {
+                            f.CopyListMatchers(filter);
+                        };
+                        FlipFilters[item.UserId.ToString()] = (item, filter);
+                        logger.LogInformation("Loaded flip filter for " + item.User.ExternalId);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, "Could not load flip filter for " + item.User.ExternalId);
+                    }
+                });
             }
             else
                 Console.WriteLine("ERROR: unkown subscibe type " + item.Type);
@@ -196,13 +218,13 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (auction.Start < DateTime.Now - TimeSpan.FromHours(2))
                 return; // to old
-            if (this.PriceUpdate.TryGetValue(auction.Tag, out ConcurrentBag<Subscription> subscribers))
+            if (this.PriceUpdateSubs.TryGetValue(auction.Tag, out ConcurrentBag<Subscription> subscribers))
             {
                 foreach (var item in subscribers)
                 {
                     var isLower = auction.StartingBid < item.Price && item.Type.HasFlag(Subscription.SubType.PriceLowerThan);
                     var isHigher = auction.StartingBid > item.Price && item.Type.HasFlag(Subscription.SubType.PriceHigherThan);
-                    var isBinIfRequired = (!item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin);
+                    var isBinIfRequired = !item.Type.HasFlag(Subscription.SubType.BIN) || auction.Bin;
                     if ((isLower || isHigher) && isBinIfRequired)
                         NotificationService.AuctionPriceAlert(item, auction);
                 }
@@ -214,6 +236,18 @@ namespace Coflnet.Sky.Subscriptions
                     NotificationService.NewAuction(item, auction);
                 }
             }
+            foreach (var item in FlipFilters)
+            {
+                var matches = item.Value.Item2.Value.MatchesSettings(FlipperService.LowPriceToFlip(new LowPricedAuction(){
+                    Auction = auction,
+                    DailyVolume = 0,
+                    Finder = LowPricedAuction.FinderType.USER,
+                    TargetPrice = auction.StartingBid,
+                    AdditionalProps = new Dictionary<string, string>()
+                }));
+                if(matches.Item1 && matches.Item2.StartsWith("white"))
+                    NotificationService.WhitelistedFlip(item.Value.Item1, auction, item.Value.Item2);
+            }
             auctionCount.Inc();
         }
 
@@ -224,7 +258,7 @@ namespace Coflnet.Sky.Subscriptions
         public void BinSold(SaveAuction auction)
         {
             var key = auction.AuctioneerId;
-            NotifyIfExisting(this.Sold, key, sub =>
+            NotifyIfExisting(this.SoldSubs, key, sub =>
             {
                 NotificationService.Sold(sub, auction);
             });
@@ -253,7 +287,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             foreach (var bid in auction.Bids.OrderByDescending(b => b.Amount).Skip(1))
             {
-                NotifyIfExisting(this.outbid, bid.Bidder, sub =>
+                NotifyIfExisting(this.OutbidSubs, bid.Bidder, sub =>
                 {
                     NotificationService.Outbid(sub, auction, bid);
                 });
@@ -280,7 +314,7 @@ namespace Coflnet.Sky.Subscriptions
         /// <param name="info"></param>
         public void PriceState(ProductInfo info)
         {
-            if (this.PriceUpdate.TryGetValue(info.ProductId, out ConcurrentBag<Subscription> subscribers))
+            if (this.PriceUpdateSubs.TryGetValue(info.ProductId, out ConcurrentBag<Subscription> subscribers))
             {
                 foreach (var item in subscribers)
                 {
@@ -305,7 +339,7 @@ namespace Coflnet.Sky.Subscriptions
         private ConcurrentDictionary<string, List<SubLookup>> OnlineSubscriptions = new ConcurrentDictionary<string, List<SubLookup>>();
         private ConcurrentQueue<UnSub> ToUnsubscribe = new ConcurrentQueue<UnSub>();
 
-        public int SubCount => outbid.Count + Sold.Count + PriceUpdate.Count;
+        public int SubCount => OutbidSubs.Count + SoldSubs.Count + PriceUpdateSubs.Count;
 
         public static TimeSpan BazzarNotificationBackoff = TimeSpan.FromHours(1);
         private IServiceScopeFactory scopeFactory;

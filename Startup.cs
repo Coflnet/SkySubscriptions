@@ -17,6 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Prometheus;
+using Coflnet.Sky.Commands.Shared;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -60,6 +61,7 @@ namespace Coflnet.Sky.Subscriptions
             services.AddSingleton<Kafka.KafkaCreator>();
             services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
             services.AddJaeger(Configuration);
+            services.AddCoflService();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

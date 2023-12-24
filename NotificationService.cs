@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Coflnet.Sky.Filter;
 using Microsoft.Extensions.Logging;
 using Confluent.Kafka;
+using Coflnet.Sky.Commands.Shared;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -21,6 +22,7 @@ namespace Coflnet.Sky.Subscriptions
         void AuctionOver(Subscription sub, SaveAuction auction);
         void AuctionPriceAlert(Subscription sub, SaveAuction auction);
         Task NewAuction(Subscription sub, SaveAuction auction);
+        Task WhitelistedFlip(Subscription sub, SaveAuction auction, FlipSettings flipSettings);
         void NewBid(Subscription sub, SaveAuction auction, SaveBids bid);
         void Outbid(Subscription sub, SaveAuction auction, SaveBids bid);
         void PriceAlert(Subscription sub, string productId, double value);
@@ -235,6 +237,11 @@ namespace Coflnet.Sky.Subscriptions
         string ItemIconUrl(string tag)
         {
             return ItemIconsBase + $"/{tag}";
+        }
+
+        public Task WhitelistedFlip(Subscription sub, SaveAuction auction, FlipSettings flipSettings)
+        {
+            return Send(sub, $"New whitelisted flip", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed an auction matching your filter", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
     }
 }
