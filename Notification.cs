@@ -8,7 +8,6 @@ namespace Coflnet.Sky.Subscriptions
         public class Notification
         {
             public string title;
-            [JsonIgnore]
             public Dictionary<string,string> data;
             public string click_action;
             public string icon;
