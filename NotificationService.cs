@@ -71,7 +71,8 @@ namespace Coflnet.Sky.Subscriptions
             {
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
-                var devices = await context.Users.Where(u => u.Id == userId).SelectMany(u => u.Devices).ToListAsync();
+                var user = await context.Users.Where(u => u.Id == userId).Include(u => u.Devices).FirstOrDefaultAsync();
+                var devices = user.Devices.ToList();
                 if (devices.Count > 0)
                     logger.LogInformation($"Sedning Notification to {userId}: {title}\n{text} {url}");
                 foreach (var item in devices)
@@ -88,7 +89,7 @@ namespace Coflnet.Sky.Subscriptions
                     context.Remove(item);
                 }
                 await context.SaveChangesAsync();
-                not.data["userId"] = userId.ToString();
+                not.data["userId"] = user.ExternalId.ToString();
                 not.data["subId"] = sub.Id.ToString();
                 await producer.ProduceAsync(config["TOPICS:NOTIFICATIONS"], new Message<string, string>
                 {
