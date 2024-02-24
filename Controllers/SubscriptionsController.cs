@@ -93,11 +93,12 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             var user = await GetOrCreate(userId);
             Console.WriteLine(JsonConvert.SerializeObject(user));
             Console.WriteLine(JsonConvert.SerializeObject(subscription));
-            var sub = user.Subscriptions.Where(s => 
+            var sub = user.Subscriptions.Where(s => s.UserId == user.Id && s.Id == subscription.Id ||
                 (s.Price == subscription.Price || subscription.Price == default) 
                 && s.Type == subscription.Type 
                 && s.TopicId == subscription.TopicId
                 && s.Filter == subscription.Filter
+                && s.UserId == user.Id
             ).FirstOrDefault();
             Console.WriteLine("Removing sub " + sub?.Id);
             if (sub == null)
