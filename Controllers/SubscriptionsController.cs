@@ -60,6 +60,15 @@ namespace Coflnet.Sky.Subscriptions.Controllers
             return user.Devices;
         }
 
+        [HttpDelete]
+        [Route("{userId}/device")]
+        public async Task<IEnumerable<Device>> RemoveDevices(string userId)
+        {
+            var user = await GetOrCreate(userId);
+            db.RemoveRange(user.Devices);
+            return user.Devices;
+        }
+
         /// <summary>
         /// Adds a new subscription
         /// </summary>
