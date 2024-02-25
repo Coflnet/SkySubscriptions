@@ -60,7 +60,7 @@ namespace Coflnet.Sky.Subscriptions
         DoubleNotificationPreventer doubleChecker = new DoubleNotificationPreventer();
         private IServiceScopeFactory scopeFactory;
 
-        internal async Task Send(Subscription sub, string title, string text, string url, string icon, Dictionary<string,string> data = null)
+        internal async Task Send(Subscription sub, string title, string text, string url, string icon, Dictionary<string, string> data = null)
         {
             var userId = sub.UserId;
             var not = new Notification(title, text, url, icon, null, data);
@@ -242,7 +242,7 @@ namespace Coflnet.Sky.Subscriptions
 
         public Task WhitelistedFlip(Subscription sub, SaveAuction auction, FlipSettings flipSettings)
         {
-            return Send(sub, $"New whitelisted flip", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed an auction matching your filter", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+            return Send(sub, $"New whitelisted flip", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed `{auction.ItemName}` matching your filter", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
     }
 }
