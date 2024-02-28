@@ -22,7 +22,7 @@ namespace Coflnet.Sky.Subscriptions
         void AuctionOver(Subscription sub, SaveAuction auction);
         void AuctionPriceAlert(Subscription sub, SaveAuction auction);
         Task NewAuction(Subscription sub, SaveAuction auction);
-        Task WhitelistedFlip(Subscription sub, SaveAuction auction, FlipSettings flipSettings);
+        Task WhitelistedFlip(Subscription sub, FlipInstance auction, FlipSettings flipSettings);
         void NewBid(Subscription sub, SaveAuction auction, SaveBids bid);
         void Outbid(Subscription sub, SaveAuction auction, SaveBids bid);
         void PriceAlert(Subscription sub, string productId, double value);
@@ -240,9 +240,31 @@ namespace Coflnet.Sky.Subscriptions
             return ItemIconsBase + $"/{tag}";
         }
 
-        public Task WhitelistedFlip(Subscription sub, SaveAuction auction, FlipSettings flipSettings)
+        public Task WhitelistedFlip(Subscription sub, FlipInstance flip, FlipSettings flipSettings)
         {
-            return Send(sub, $"New whitelisted flip", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed `{auction.ItemName}` matching your filter", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+            var matched = WhichMatches(flip, flipSettings);
+            var auction = flip.Auction;
+            var message = $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed it for {auction.StartingBid} coins";
+            if (matched != null)
+            {
+                message += $"\nIt matched {FormatEntry(matched)}";
+            }
+            return Send(sub, $"New whitelisted auction for {auction.ItemName}", message, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+        }
+
+        private ListEntry WhichMatches(FlipInstance flip, FlipSettings flipSettings)
+        {
+            foreach (var item in flipSettings.WhiteList)
+            {
+                if (item.MatchesSettings(flip))
+                    return item;
+            }
+            return null;
+        }
+
+        public static string FormatEntry(ListEntry elem)
+        {
+            return $"{elem.DisplayName ?? elem.ItemTag} {(elem.filter == null ? "" : string.Join(" & ", elem.filter.Select(f => $"{f.Key}=`{f.Value}`")))}";
         }
     }
 }

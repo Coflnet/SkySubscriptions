@@ -238,15 +238,16 @@ namespace Coflnet.Sky.Subscriptions
             }
             foreach (var item in FlipFilters)
             {
-                var matches = item.Value.Item2.Value.MatchesSettings(FlipperService.LowPriceToFlip(new LowPricedAuction(){
+                var flip = FlipperService.LowPriceToFlip(new LowPricedAuction(){
                     Auction = auction,
                     DailyVolume = 0,
                     Finder = LowPricedAuction.FinderType.USER,
                     TargetPrice = auction.StartingBid,
                     AdditionalProps = new Dictionary<string, string>()
-                }));
+                });
+                var matches = item.Value.Item2.Value.MatchesSettings(flip);
                 if(matches.Item1 && matches.Item2.StartsWith("white"))
-                    NotificationService.WhitelistedFlip(item.Value.Item1, auction, item.Value.Item2);
+                    NotificationService.WhitelistedFlip(item.Value.Item1, flip, item.Value.Item2);
             }
             auctionCount.Inc();
         }
