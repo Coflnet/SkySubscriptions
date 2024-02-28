@@ -197,7 +197,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (!Matches(auction, sub.Filter))
                 return;
-            var text = $"New Auction for {auction.ItemName} for {String.Format("{0:n0}", auction.StartingBid)} coins";
+            var text = $"New Auction for {auction.ItemName} for {Format(auction.StartingBid)} coins";
             Task.Run(() => Send(sub, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
@@ -244,7 +244,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             var matched = WhichMatches(flip, flipSettings);
             var auction = flip.Auction;
-            var message = $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} listed it for {auction.StartingBid} coins";
+            var message = $"`{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)}` listed it for `{Format(auction.StartingBid)}` coins";
             if (matched != null)
             {
                 message += $"\nIt matched {FormatEntry(matched)}";
@@ -262,6 +262,11 @@ namespace Coflnet.Sky.Subscriptions
                     return item;
             }
             return null;
+        }
+
+        private string Format(long number)
+        {
+            return  string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:n0}", number); ;
         }
 
         public static string FormatEntry(ListEntry elem)
