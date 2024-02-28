@@ -52,7 +52,7 @@ namespace Coflnet.Sky.Subscriptions
             // Replace 'YourDbContext' with the name of your own DbContext derived class.
             services.AddDbContext<SubsDbContext>(
                 dbContextOptions => dbContextOptions
-                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion)
+                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion, b=>b.EnableRetryOnFailure(5))
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
