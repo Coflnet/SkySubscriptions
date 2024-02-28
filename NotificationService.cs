@@ -249,7 +249,9 @@ namespace Coflnet.Sky.Subscriptions
             {
                 message += $"\nIt matched {FormatEntry(matched)}";
             }
-            return Send(sub, $"New whitelisted auction for {auction.ItemName}", message, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+            var data = FormatAuction(auction);
+            data["whitelist"] = JsonConvert.SerializeObject(matched);
+            return Send(sub, $"New whitelisted auction for {auction.ItemName}", message, AuctionUrl(auction), ItemIconUrl(auction.Tag), data);
         }
 
         private ListEntry WhichMatches(FlipInstance flip, FlipSettings flipSettings)
