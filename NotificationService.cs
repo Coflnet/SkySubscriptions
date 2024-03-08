@@ -266,12 +266,12 @@ namespace Coflnet.Sky.Subscriptions
 
         private string Format(long number)
         {
-            return  string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:n0}", number); ;
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:n0}", number); ;
         }
 
         public static string FormatEntry(ListEntry elem)
         {
-            return $"{elem.DisplayName ?? elem.ItemTag} {(elem.filter == null ? "" : string.Join(" & ", elem.filter.Select(f => $"{f.Key}=`{f.Value}`")))}";
+            return $"{elem.DisplayName ?? elem.ItemTag} {(elem.filter == null ? "" : string.Join(" & ", elem.filter.Select(f => $"{f.Key}=`{(f.Value.Length > 50 ? f.Value[..58] + "..." : f.Value)}`")))}";
         }
     }
 }
