@@ -91,6 +91,8 @@ namespace Coflnet.Sky.Subscriptions
                 await context.SaveChangesAsync();
                 not.data["userId"] = user.ExternalId.ToString();
                 not.data["subId"] = sub.Id.ToString();
+                if (not.title.Contains("whitelisted"))
+                    logger.LogInformation($"{sub.UserId}: {not.title} {not.body}");
                 await producer.ProduceAsync(config["TOPICS:NOTIFICATIONS"], new Message<string, string>
                 {
                     Key = userId.ToString(),
