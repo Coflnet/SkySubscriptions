@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Coflnet.Sky.Commands.Shared;
+using Moq;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -38,7 +39,7 @@ namespace Coflnet.Sky.Subscriptions
         /// </summary>
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> AuctionSub = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> UserAuction = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
-        private ConcurrentDictionary<string, (Subscription,SelfUpdatingValue<FlipSettings>)> FlipFilters = new ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)>();
+        private ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)> FlipFilters = new ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)>();
 
         private static Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_consume", "The total amount of consumed messages");
         private static Prometheus.Counter auctionCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_new_auction", "How many new auctions were consumed");
@@ -139,7 +140,7 @@ namespace Coflnet.Sky.Subscriptions
             using var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
 
             var minTime = DateTime.Now.Subtract(TimeSpan.FromDays(200));
-            var all = context.Subscriptions.Where(si => si.GeneratedAt > minTime).Include(s=>s.User);
+            var all = context.Subscriptions.Where(si => si.GeneratedAt > minTime).Include(s => s.User);
             foreach (var item in all)
             {
                 AddSubscription(item);
@@ -170,24 +171,27 @@ namespace Coflnet.Sky.Subscriptions
             {
                 AddSubscription(item, UserAuction);
             }
-            else if(item.Type.HasFlag(Subscription.SubType.FILTER))
+            else if (item.Type.HasFlag(Subscription.SubType.FILTER))
             {
                 Task.Run(async () =>
                 {
-                    try
-                    {
-                        var filter = await SelfUpdatingValue<FlipSettings>.Create(item.User.ExternalId, "flipSettings");
-                        filter.OnChange += (f) =>
+                    for (int i = 0; i < 3; i++)
+                        try
                         {
-                            f.CopyListMatchers(filter);
-                        };
-                        FlipFilters[item.UserId.ToString()] = (item, filter);
-                        logger.LogInformation("Loaded flip filter for " + item.User.ExternalId);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e, "Could not load flip filter for " + item.User.ExternalId);
-                    }
+                            var filter = await SelfUpdatingValue<FlipSettings>.Create(item.User.ExternalId, "flipSettings");
+                            filter.OnChange += (f) =>
+                            {
+                                f.CopyListMatchers(filter);
+                            };
+                            FlipFilters[item.UserId.ToString()] = (item, filter);
+                            logger.LogInformation("Loaded flip filter for " + item.User.ExternalId);
+                            return;
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogError(e, "Could not load flip filter for " + item.User.ExternalId);
+                            await Task.Delay((1 + i) * TimeSpan.FromSeconds(5));
+                        }
                 });
             }
             else
@@ -238,7 +242,8 @@ namespace Coflnet.Sky.Subscriptions
             }
             foreach (var item in FlipFilters)
             {
-                var flip = FlipperService.LowPriceToFlip(new LowPricedAuction(){
+                var flip = FlipperService.LowPriceToFlip(new LowPricedAuction()
+                {
                     Auction = auction,
                     DailyVolume = 0,
                     Finder = LowPricedAuction.FinderType.USER,
@@ -246,7 +251,7 @@ namespace Coflnet.Sky.Subscriptions
                     AdditionalProps = new Dictionary<string, string>()
                 });
                 var matches = item.Value.Item2.Value.MatchesSettings(flip);
-                if(matches.Item1 && matches.Item2.StartsWith("white"))
+                if (matches.Item1 && matches.Item2.StartsWith("white"))
                     NotificationService.WhitelistedFlip(item.Value.Item1, flip, item.Value.Item2);
             }
             auctionCount.Inc();
