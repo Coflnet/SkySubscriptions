@@ -182,7 +182,10 @@ namespace Coflnet.Sky.Subscriptions
                             filter.OnChange += (f) =>
                             {
                                 f.CopyListMatchers(filter);
+                                f.AllowedFinders |= LowPricedAuction.FinderType.USER;
                             };
+                            // always enable user finder for notifications
+                            filter.Value.AllowedFinders |= LowPricedAuction.FinderType.USER;
                             FlipFilters[item.UserId.ToString()] = (item, filter);
                             logger.LogInformation("Loaded flip filter for " + item.User.ExternalId);
                             return;
