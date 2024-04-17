@@ -249,7 +249,7 @@ namespace Coflnet.Sky.Subscriptions
             var message = $"`{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)}` listed it for `{Format(auction.StartingBid)}` coins";
             if (matched != null)
             {
-                message += $"\n\nIt matched {FormatEntry(matched)}";
+                message += $"\n\nIt matched {FormatEntry(matched)}\n`/viewauction {auction.Uuid}`";
             }
             var data = FormatAuction(auction);
             data["whitelist"] = JsonConvert.SerializeObject(matched);
