@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Coflnet.Kafka;
 using Coflnet.Sky.Subscriptions.Models;
-using Confluent.Kafka;
 using dev;
 using Coflnet.Sky.Core;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +15,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Coflnet.Sky.Commands.Shared;
-using Moq;
 
 namespace Coflnet.Sky.Subscriptions
 {
