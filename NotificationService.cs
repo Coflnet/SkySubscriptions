@@ -220,24 +220,24 @@ namespace Coflnet.Sky.Subscriptions
         {
             return BaseUrl + "/auction/" + auction.Uuid;
         }
-        private bool Matches(SaveAuction auction, Subscription filter)
+        private bool Matches(SaveAuction auction, Subscription sub)
         {
-            if (string.IsNullOrEmpty(filter.Filter))
+            if (string.IsNullOrEmpty(sub.Filter))
                 return true;
             try
             {
-                if (filter.matcherCache == null)
+                if (sub.matcherCache == null)
                 {
-                    var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter.Filter);
-                    filter.matcherCache = filterEngine.GetMatcher(filters);
+                    var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(sub.Filter);
+                    sub.matcherCache = filterEngine.GetMatcher(filters);
                 }
-                return filter.matcherCache(auction);
+                return sub.matcherCache(auction);
             }
             catch (System.Exception e)
             {
-                logger.LogError(e, $"Could not match filter {filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
+                logger.LogError(e, $"Could not match filter {sub.Filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
                 auction.NBTLookup = NBT.CreateLookup(auction);
-                var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter.Filter);
+                var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(sub.Filter);
                 return filterEngine.GetMatcher(filters)(auction);
             }
         }
