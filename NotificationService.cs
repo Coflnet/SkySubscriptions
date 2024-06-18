@@ -197,7 +197,7 @@ namespace Coflnet.Sky.Subscriptions
 
         public void AuctionPriceAlert(Subscription sub, SaveAuction auction)
         {
-            if (!Matches(auction, sub.Filter))
+            if (!Matches(auction, sub))
                 return;
             var text = $"New Auction for {auction.ItemName} for {Format(auction.StartingBid)} coins";
             Task.Run(() => Send(sub, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
@@ -206,7 +206,7 @@ namespace Coflnet.Sky.Subscriptions
 
         public Task NewAuction(Subscription sub, SaveAuction auction)
         {
-            if (!Matches(auction, sub.Filter))
+            if (!Matches(auction, sub))
                 return Task.CompletedTask;
             return Send(sub, $"New auction", $"{PlayerSearch.Instance.GetNameWithCache(auction.AuctioneerId)} created a new auction", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
         }
@@ -220,19 +220,24 @@ namespace Coflnet.Sky.Subscriptions
         {
             return BaseUrl + "/auction/" + auction.Uuid;
         }
-        private bool Matches(SaveAuction auction, string filter)
+        private bool Matches(SaveAuction auction, Subscription filter)
         {
-            if (string.IsNullOrEmpty(filter))
+            if (string.IsNullOrEmpty(filter.Filter))
                 return true;
-            var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter);
             try
             {
-                return filterEngine.GetMatcher(filters)(auction);
+                if (filter.matcherCache == null)
+                {
+                    var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter.Filter);
+                    filter.matcherCache = filterEngine.GetMatcher(filters);
+                }
+                return filter.matcherCache(auction);
             }
             catch (System.Exception e)
             {
                 logger.LogError(e, $"Could not match filter {filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
                 auction.NBTLookup = NBT.CreateLookup(auction);
+                var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(filter.Filter);
                 return filterEngine.GetMatcher(filters)(auction);
             }
         }

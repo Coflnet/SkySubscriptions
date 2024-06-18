@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using Coflnet.Sky.Core;
 
 namespace Coflnet.Sky.Subscriptions.Models
 {
@@ -61,5 +62,9 @@ namespace Coflnet.Sky.Subscriptions.Models
         [MaxLength(200)]
         [DataMember(Name = "filter")]
         public string Filter { get; set; }
+        [IgnoreDataMember]
+        [JsonIgnore]
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public Func<SaveAuction, bool> matcherCache;
     }
 }
