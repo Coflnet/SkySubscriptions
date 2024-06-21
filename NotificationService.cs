@@ -233,7 +233,7 @@ namespace Coflnet.Sky.Subscriptions
                 }
                 return sub.matcherCache(auction);
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 logger.LogError(e, $"Could not match filter {sub.Filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
                 auction.NBTLookup = NBT.CreateLookup(auction);
@@ -242,7 +242,7 @@ namespace Coflnet.Sky.Subscriptions
             }
         }
 
-        string ItemIconUrl(string tag)
+        static string ItemIconUrl(string tag)
         {
             return ItemIconsBase + $"/{tag}";
         }
