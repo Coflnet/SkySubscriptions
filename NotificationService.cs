@@ -266,7 +266,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             foreach (var item in flipSettings.WhiteList)
             {
-                if (item.MatchesSettings(flip))
+                if (item.MatchesSettings(flip, new EmptyPlayerInfo()))
                     return item;
             }
             return null;
@@ -281,5 +281,11 @@ namespace Coflnet.Sky.Subscriptions
         {
             return $"{elem.DisplayName ?? elem.ItemTag} {(elem.filter == null ? "" : string.Join(" & ", elem.filter.Select(f => $"{f.Key}=`{(f.Value.Length > 50 ? f.Value[..58] + "..." : f.Value)}`")))}";
         }
+    }
+
+    public class EmptyPlayerInfo : IPlayerInfo
+    {
+        public long Purse { get => 0; set => throw new NotImplementedException(); }
+        public long AhSlotsOpen { get => -1; set => throw new NotImplementedException(); }
     }
 }
