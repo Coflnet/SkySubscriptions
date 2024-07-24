@@ -421,6 +421,7 @@ namespace Coflnet.Sky.Subscriptions
             {
                 // make sure all migrations are applied
                 await context.Database.MigrateAsync();
+                logger.LogInformation("Database migrated");
             }
             await LoadFromDb();
             await ProcessQueues(stoppingToken);

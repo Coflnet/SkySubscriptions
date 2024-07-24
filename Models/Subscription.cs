@@ -59,7 +59,7 @@ namespace Coflnet.Sky.Subscriptions.Models
         public User User { get; set; }
         public int UserId { get; set; }
 
-        [MaxLength(200)]
+        [MaxLength(5000)]
         [DataMember(Name = "filter")]
         public string Filter { get; set; }
         [IgnoreDataMember]
