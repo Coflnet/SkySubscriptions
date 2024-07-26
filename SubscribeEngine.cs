@@ -92,7 +92,7 @@ namespace Coflnet.Sky.Subscriptions
                 }
                 consumeCount.Inc(batch.Count());
                 return Task.CompletedTask;
-            }, token, "sky-sub-engine", 100);
+            }, token, "sky-sub-engine", 100, Confluent.Kafka.AutoOffsetReset.Latest);
 
             Console.WriteLine("stopped listening " + string.Join(",", topics));
         }
