@@ -150,6 +150,9 @@ namespace Coflnet.Sky.Subscriptions
 
         private void AddSubscription(Subscription item)
         {
+            if (item.Type.HasFlag(Subscription.SubType.Buy))
+                AddSubscription(item, UserBuy);
+
             if (item.Type.HasFlag(Subscription.SubType.OUTBID))
             {
                 AddSubscription(item, OutbidSubs);
@@ -165,10 +168,6 @@ namespace Coflnet.Sky.Subscriptions
             else if (item.Type.HasFlag(Subscription.SubType.AUCTION))
             {
                 AddSubscription(item, AuctionSub);
-            }
-            else if (item.Type.HasFlag(Subscription.SubType.Buy))
-            {
-                AddSubscription(item, UserBuy);
             }
             else if (item.Type.HasFlag(Subscription.SubType.PLAYER))
             {
@@ -278,7 +277,7 @@ namespace Coflnet.Sky.Subscriptions
             {
                 NotificationService.AuctionOver(sub, auction);
             });
-            NotifyIfExisting(UserBuy, auction.Bids.OrderByDescending(s=>s.Amount).FirstOrDefault()?.Bidder ?? "None", sub =>
+            NotifyIfExisting(UserBuy, auction.Bids.OrderByDescending(s => s.Amount).FirstOrDefault()?.Bidder ?? "None", sub =>
             {
                 NotificationService.PlayerBuy(sub, auction);
             });
