@@ -28,6 +28,7 @@ namespace Coflnet.Sky.Subscriptions
         void PriceAlert(Subscription sub, string productId, double value);
         void Sold(Subscription sub, SaveAuction auction);
         Task<bool> TryNotifyAsync(string to, NotificationService.Notification notification);
+        void PlayerBuy(Subscription sub, SaveAuction auction);
     }
 
     /// <summary>
@@ -280,6 +281,13 @@ namespace Coflnet.Sky.Subscriptions
         public static string FormatEntry(ListEntry elem)
         {
             return $"{elem.DisplayName ?? elem.ItemTag} {(elem.filter == null ? "" : string.Join(" & ", elem.filter.Select(f => $"{f.Key}=`{(f.Value.Length > 50 ? f.Value[..58] + "..." : f.Value)}`")))}";
+        }
+
+        public void PlayerBuy(Subscription sub, SaveAuction auction)
+        {
+            if (!Matches(auction, sub))
+                return;
+             Task.Run(() => Send(sub, $"Auction bought", $"{PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b=>b.Amount).FirstOrDefault().Bidder)} bought {auction.ItemName}", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction)));
         }
     }
 

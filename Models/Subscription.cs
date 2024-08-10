@@ -46,6 +46,10 @@ namespace Coflnet.Sky.Subscriptions.Models
             /// Use flip filter
             /// </summary>
             FILTER = 512,
+            /// <summary>
+            /// User bought an auction
+            /// </summary>
+            Buy = 1024,
         }
 
         [DataMember(Name = "type")]

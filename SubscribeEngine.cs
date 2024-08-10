@@ -37,6 +37,7 @@ namespace Coflnet.Sky.Subscriptions
         /// </summary>
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> AuctionSub = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
         private ConcurrentDictionary<string, ConcurrentBag<Subscription>> UserAuction = new ConcurrentDictionary<string, ConcurrentBag<Subscription>>();
+        private ConcurrentDictionary<string, ConcurrentBag<Subscription>> UserBuy = new();
         private ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)> FlipFilters = new ConcurrentDictionary<string, (Subscription, SelfUpdatingValue<FlipSettings>)>();
 
         private static Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_subscriptions_consume", "The total amount of consumed messages");
@@ -165,6 +166,10 @@ namespace Coflnet.Sky.Subscriptions
             {
                 AddSubscription(item, AuctionSub);
             }
+            else if (item.Type.HasFlag(Subscription.SubType.Buy))
+            {
+                AddSubscription(item, UserBuy);
+            }
             else if (item.Type.HasFlag(Subscription.SubType.PLAYER))
             {
                 AddSubscription(item, UserAuction);
@@ -272,6 +277,10 @@ namespace Coflnet.Sky.Subscriptions
             NotifyIfExisting(this.AuctionSub, auction.Uuid, sub =>
             {
                 NotificationService.AuctionOver(sub, auction);
+            });
+            NotifyIfExisting(UserBuy, auction.Bids.OrderByDescending(s=>s.Amount).FirstOrDefault()?.Bidder ?? "None", sub =>
+            {
+                NotificationService.PlayerBuy(sub, auction);
             });
         }
 
