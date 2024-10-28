@@ -78,7 +78,7 @@ namespace Coflnet.Sky.Subscriptions
 
         private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
         {
-            return KafkaConsumer.ConsumeBatch<T>(config, topics, (batch) =>
+            return Kafka.KafkaConsumer.ConsumeBatch<T>(config, topics, (batch) =>
             {
                 foreach (var item in batch)
                 {
@@ -94,8 +94,6 @@ namespace Coflnet.Sky.Subscriptions
                 consumeCount.Inc(batch.Count());
                 return Task.CompletedTask;
             }, token, "sky-sub-engine", 100, Confluent.Kafka.AutoOffsetReset.Latest);
-
-            Console.WriteLine("stopped listening " + string.Join(",", topics));
         }
 
         public void AddNew(Subscription subscription)
