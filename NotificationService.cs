@@ -174,7 +174,10 @@ namespace Coflnet.Sky.Subscriptions
         public void Outbid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
             var outBidBy = auction.HighestBidAmount - bid.Amount;
-            var text = $"You were outbid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} by {outBidBy}";
+            var text = $"You were outbid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b => b.Amount).FirstOrDefault().Bidder)} by {outBidBy}";
+            if (sub.NotTriggerAgainBefore > DateTime.UtcNow)
+                return;
+            sub.NotTriggerAgainBefore = DateTime.UtcNow.AddMinutes(1);
             Task.Run(() => Send(sub, "Outbid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
@@ -287,7 +290,7 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (!Matches(auction, sub))
                 return;
-             Task.Run(() => Send(sub, $"Auction bought", $"{PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b=>b.Amount).FirstOrDefault().Bidder)} bought {auction.ItemName}", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction)));
+            Task.Run(() => Send(sub, $"Auction bought", $"{PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b => b.Amount).FirstOrDefault().Bidder)} bought {auction.ItemName}", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction)));
         }
     }
 
