@@ -72,24 +72,7 @@ namespace Coflnet.Sky.Subscriptions
             {
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
-                var user = await context.Users.Where(u => u.Id == userId).Include(u => u.Devices).FirstOrDefaultAsync();
-                var devices = user.Devices.ToList();
-                if (devices.Count > 0)
-                    logger.LogInformation($"Sedning Notification to {userId}: {title}\n{text} {url}");
-                foreach (var item in devices)
-                {
-                    Console.WriteLine("sending to " + item.UserId);
-                    var success = await TryNotifyAsync(item.Token, not);
-                    if (success)
-                    {
-                        // store that was sent Notification
-                        continue;
-                    }
-                    dev.Logger.Instance.Error("Sending pushnotification failed to");
-                    dev.Logger.Instance.Error(JsonConvert.SerializeObject(item));
-                    context.Remove(item);
-                }
-                await context.SaveChangesAsync();
+                var user = await context.Users.Where(u => u.Id == userId).FirstOrDefaultAsync();
                 if(not.data == null)
                     not.data = [];
                 not.data["userId"] = user.ExternalId.ToString();
