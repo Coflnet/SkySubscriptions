@@ -90,6 +90,8 @@ namespace Coflnet.Sky.Subscriptions
                     context.Remove(item);
                 }
                 await context.SaveChangesAsync();
+                if(data == null)
+                    data = [];
                 not.data["userId"] = user.ExternalId.ToString();
                 not.data["subId"] = sub.Id.ToString();
                 if (not.title.Contains("whitelisted"))
