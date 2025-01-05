@@ -342,6 +342,7 @@ namespace Coflnet.Sky.Subscriptions
                         if (item.NotTriggerAgainBefore < DateTime.Now)
                             return;
                         item.NotTriggerAgainBefore = DateTime.Now + TimeSpan.FromHours(1);
+                        logger.LogInformation("Price alert for " + item.TopicId + " " + value + " " + item.Price);
                         NotificationService.PriceAlert(item, info.ProductId, value);
                     }
                 }
