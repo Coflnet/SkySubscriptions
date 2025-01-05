@@ -299,5 +299,7 @@ namespace Coflnet.Sky.Subscriptions
         public long Purse { get => 0; set => throw new NotImplementedException(); }
         public long AhSlotsOpen { get => -1; set => throw new NotImplementedException(); }
         public AccountTier SessionTier { get => AccountTier.NONE; set => throw new NotImplementedException(); }
+        public string McName { get => "null"; set => throw new NotImplementedException(); }
+        public string McUuid { get => Guid.Empty.ToString(); set => throw new NotImplementedException(); }
     }
 }
