@@ -101,9 +101,9 @@ namespace Coflnet.Sky.Subscriptions
                 });
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                dev.Logger.Instance.Error($"Could not send {not.body} to {userId}");
+                dev.Logger.Instance.Error(e, $"Could not send {not.body} to {userId}");
             }
 
         }
