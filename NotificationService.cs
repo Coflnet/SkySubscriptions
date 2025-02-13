@@ -27,7 +27,7 @@ namespace Coflnet.Sky.Subscriptions
         void Outbid(Subscription sub, SaveAuction auction, SaveBids bid);
         void PriceAlert(Subscription sub, string productId, double value);
         void Sold(Subscription sub, SaveAuction auction);
-        Task<bool> TryNotifyAsync(string to, NotificationService.Notification notification);
+        Task<bool> TryNotifyAsync(string to, Notification notification);
         void PlayerBuy(Subscription sub, SaveAuction auction);
     }
 

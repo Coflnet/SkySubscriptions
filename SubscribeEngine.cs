@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Coflnet.Sky.Commands.Shared;
+using System.CodeDom;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -223,7 +224,7 @@ namespace Coflnet.Sky.Subscriptions
         /// <param name="auction"></param>
         public void NewAuction(SaveAuction auction)
         {
-            if (auction.Start < DateTime.Now - TimeSpan.FromHours(2))
+            if (auction.Start < DateTime.UtcNow - TimeSpan.FromHours(2))
                 return; // to old
             if (this.PriceUpdateSubs.TryGetValue(auction.Tag, out ConcurrentBag<Subscription> subscribers))
             {
@@ -236,13 +237,7 @@ namespace Coflnet.Sky.Subscriptions
                         NotificationService.AuctionPriceAlert(item, auction);
                 }
             }
-            if (this.UserAuction.TryGetValue(auction.AuctioneerId, out subscribers))
-            {
-                foreach (var item in subscribers)
-                {
-                    NotificationService.NewAuction(item, auction);
-                }
-            }
+            NotifyAllIn(UserAuction, auction.AuctioneerId, (item) => NotificationService.NewAuction(item, auction)).Wait();
             foreach (var item in FlipFilters)
             {
                 var flip = FlipperService.LowPriceToFlip(new LowPricedAuction()
@@ -258,6 +253,25 @@ namespace Coflnet.Sky.Subscriptions
                     NotificationService.WhitelistedFlip(item.Value.Item1, flip, item.Value.Item2);
             }
             auctionCount.Inc();
+        }
+
+        private async Task NotifyAllIn(ConcurrentDictionary<string, ConcurrentBag<Subscription>> collection, string key, Func<Subscription, Task> action)
+        {
+            if (collection.TryGetValue(key, out var subscribers))
+            {
+                foreach (var item in subscribers)
+                {
+                    try
+                    {
+                        await action(item);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Instance.Error(e, "Error while notifying " + item.Id);
+                        await Unsubscribe(item);
+                    }
+                }
+            }
         }
 
         /// <summary>
