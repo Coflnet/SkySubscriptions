@@ -151,12 +151,15 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (item.Type.HasFlag(Subscription.SubType.Buy))
                 AddSubscription(item, UserBuy);
-
+            if (item.Type.HasFlag(Subscription.SubType.PLAYER))
+            {
+                AddSubscription(item, UserAuction);
+            }
             if (item.Type.HasFlag(Subscription.SubType.OUTBID))
             {
                 AddSubscription(item, OutbidSubs);
             }
-            else if (item.Type.HasFlag(Subscription.SubType.SOLD))
+            if (item.Type.HasFlag(Subscription.SubType.SOLD))
             {
                 AddSubscription(item, SoldSubs);
             }
@@ -167,10 +170,6 @@ namespace Coflnet.Sky.Subscriptions
             else if (item.Type.HasFlag(Subscription.SubType.AUCTION))
             {
                 AddSubscription(item, AuctionSub);
-            }
-            else if (item.Type.HasFlag(Subscription.SubType.PLAYER))
-            {
-                AddSubscription(item, UserAuction);
             }
             else if (item.Type.HasFlag(Subscription.SubType.FILTER))
             {
