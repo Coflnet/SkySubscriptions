@@ -37,7 +37,7 @@ namespace Coflnet.Sky.Subscriptions
     public partial class NotificationService : INotificationService
     {
         public static string BaseUrl = "https://sky.coflnet.com";
-        public static string ItemIconsBase = "https://sky.shiiyu.moe/item";
+        public static string ItemIconsBase = "https://sky.coflnet.com/static/icon";
         static string firebaseKey = SimplerConfig.Config.Instance["FIREBASE_KEY"];
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
         static FilterEngine filterEngine = new FilterEngine();
