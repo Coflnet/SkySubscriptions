@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Coflnet.Sky.Commands.Shared;
+using Coflnet.Sky.Items.Client.Api;
+using Coflnet.Sky.Filter;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -58,7 +60,15 @@ namespace Coflnet.Sky.Subscriptions
             );
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<SubscribeEngine>();
+            services.AddSingleton<NBT>();
+            services.AddSingleton<ItemDetails>();
             services.AddSingleton<Kafka.KafkaCreator>();
+            services.AddSingleton<FilterEngine>();
+            services.AddSingleton<IItemsApi>(di=>
+            {
+                var config = di.GetRequiredService<IConfiguration>();
+                return new ItemsApi(config["ITEMS_BASE_URL"]);
+            });
             services.AddHostedService<SubscribeEngine>(provider => provider.GetService<SubscribeEngine>());
             services.AddJaeger(Configuration);
             services.AddCoflService();

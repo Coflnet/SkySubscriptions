@@ -40,7 +40,8 @@ namespace Coflnet.Sky.Subscriptions
         public static string ItemIconsBase = "https://sky.coflnet.com/static/icon";
         static string firebaseKey = SimplerConfig.Config.Instance["FIREBASE_KEY"];
         static string firebaseSenderId = SimplerConfig.Config.Instance["FIREBASE_SENDER_ID"];
-        static FilterEngine filterEngine = new FilterEngine();
+        private FilterEngine filterEngine;
+        private NBT nbt;
         private ILogger<NotificationService> logger;
         private IProducer<string, string> producer;
         private IConfiguration config;
@@ -48,13 +49,16 @@ namespace Coflnet.Sky.Subscriptions
         public NotificationService(
                     IServiceScopeFactory scopeFactory,
                     IConfiguration config, ILogger<NotificationService> logger,
-                    Kafka.KafkaCreator kafkaCreator)
+                    Kafka.KafkaCreator kafkaCreator,
+                    FilterEngine filterEngine, NBT nbt)
         {
             this.scopeFactory = scopeFactory;
             this.logger = logger;
             this.config = config;
             _ = kafkaCreator.CreateTopicIfNotExist(config["TOPICS:NOTIFICATIONS"]);
             producer = kafkaCreator.BuildProducer<string, string>(false);
+            this.filterEngine = filterEngine;
+            this.nbt = nbt;
         }
 
 
@@ -225,7 +229,7 @@ namespace Coflnet.Sky.Subscriptions
             catch (Exception e)
             {
                 logger.LogError(e, $"Could not match filter {sub.Filter} on {JsonConvert.SerializeObject(auction)} retrying with nbt");
-                auction.NBTLookup = NBT.CreateLookup(auction);
+                auction.NBTLookup = nbt.CreateLookup(auction);
                 var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(sub.Filter);
                 return filterEngine.GetMatcher(filters)(auction);
             }
