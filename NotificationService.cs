@@ -77,7 +77,7 @@ namespace Coflnet.Sky.Subscriptions
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>();
                 var user = await context.Users.Where(u => u.Id == userId).FirstOrDefaultAsync();
-                if(not.data == null)
+                if (not.data == null)
                     not.data = [];
                 not.data["userId"] = user.ExternalId.ToString();
                 not.data["subId"] = sub.Id.ToString();
@@ -219,6 +219,8 @@ namespace Coflnet.Sky.Subscriptions
                 return true;
             try
             {
+                if (auction.Tag == "CAKE_SOUL")
+                    Console.WriteLine("Trying to match cake soul with " + JsonConvert.SerializeObject(auction) + " and " + sub.Filter);
                 if (sub.matcherCache == null)
                 {
                     var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(sub.Filter);
