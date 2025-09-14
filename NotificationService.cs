@@ -219,14 +219,15 @@ namespace Coflnet.Sky.Subscriptions
                 return true;
             try
             {
-                if (auction.Tag == "CAKE_SOUL")
-                    Console.WriteLine("Trying to match cake soul with " + JsonConvert.SerializeObject(auction) + " and " + sub.Filter);
                 if (sub.matcherCache == null)
                 {
                     var filters = JsonConvert.DeserializeObject<Dictionary<string, string>>(sub.Filter);
                     sub.matcherCache = filterEngine.GetMatcher(filters);
                 }
-                return sub.matcherCache(auction);
+                var matched = sub.matcherCache(auction);
+                if (auction.Tag == "CAKE_SOUL")
+                    Console.WriteLine($"Trying to match cake soul with matched ({matched})" + JsonConvert.SerializeObject(auction) + " and " + sub.Filter);
+                return matched;
             }
             catch (Exception e)
             {
