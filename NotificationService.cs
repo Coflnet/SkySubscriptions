@@ -193,7 +193,19 @@ namespace Coflnet.Sky.Subscriptions
             if (!Matches(auction, sub))
                 return;
             var text = $"New Auction for {auction.ItemName} for {Format(auction.StartingBid)} coins";
-            Task.Run(() => Send(sub, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    if(auction.Tag == "CAKE_SOUL")
+                        Console.WriteLine($"Trying to send cake soul auction price alert" + JsonConvert.SerializeObject(auction));
+                    await Send(sub, $"Price Alert", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction));
+                }
+                catch (System.Exception e)
+                {
+                    logger.LogError(e, "Could not send auction price alert");
+                }
+            }).ConfigureAwait(false);
         }
 
 
