@@ -186,6 +186,7 @@ namespace Coflnet.Sky.Subscriptions
                             };
                             // always enable user finder for notifications
                             filter.Value.AllowedFinders |= LowPricedAuction.FinderType.USER;
+                            filter.Value.PlayerInfo = new EmptyPlayerInfo();
                             FlipFilters[item.UserId.ToString()] = (item, filter);
                             logger.LogInformation("Loaded flip filter for " + item.User.ExternalId);
                             return;
