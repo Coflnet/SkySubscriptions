@@ -181,9 +181,17 @@ namespace Coflnet.Sky.Subscriptions
                             var filter = await SelfUpdatingValue<FlipSettings>.Create(item.User.ExternalId, "flipSettings");
                             filter.OnChange += (f) =>
                             {
-                                f.CopyListMatchers(filter);
-                                f.AllowedFinders |= LowPricedAuction.FinderType.USER;
-                                logger.LogInformation("Updated flip filter for " + item.User.ExternalId);
+                                try
+                                {
+                                    f.PlayerInfo = new EmptyPlayerInfo();
+                                    f.CopyListMatchers(filter);
+                                    f.AllowedFinders |= LowPricedAuction.FinderType.USER;
+                                    logger.LogInformation("Updated flip filter for " + item.User.ExternalId);
+                                }
+                                catch (System.Exception e)
+                                {
+                                    logger.LogError(e, "Could not update flip filter for " + item.User.ExternalId);
+                                }
                             };
                             // always enable user finder for notifications
                             filter.Value.AllowedFinders |= LowPricedAuction.FinderType.USER;
