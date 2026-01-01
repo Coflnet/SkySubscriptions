@@ -183,6 +183,7 @@ namespace Coflnet.Sky.Subscriptions
                             {
                                 f.CopyListMatchers(filter);
                                 f.AllowedFinders |= LowPricedAuction.FinderType.USER;
+                                logger.LogInformation("Updated flip filter for " + item.User.ExternalId);
                             };
                             // always enable user finder for notifications
                             filter.Value.AllowedFinders |= LowPricedAuction.FinderType.USER;
