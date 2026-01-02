@@ -74,7 +74,13 @@ namespace Coflnet.Sky.Subscriptions
             Task.Run(() => ProcessSubscription<SaveAuction>(topics, BinSold, token)),
             Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_AUCTION"] }, NewAuction, token)),
             Task.Run(() => ProcessSubscription<BazaarPull>(new string[] { config["TOPICS:BAZAAR"] }, NewBazaar, token)),
-            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_BID"] }, NewBids, token)));
+            Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_BID"] }, NewBids, token)),
+            Task.Run(() => ProcessSubscription<LowPricedAuction>([config["TOPICS:LOW_PRICED"]], NewFlips, token)));
+        }
+
+        private void NewFlips(LowPricedAuction lowPriced)
+        {
+            WhitelistFilter(lowPriced);
         }
 
         private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
@@ -247,21 +253,27 @@ namespace Coflnet.Sky.Subscriptions
                 }
             }
             NotifyAllIn(UserAuction, auction.AuctioneerId, (item) => NotificationService.NewAuction(item, auction)).Wait();
+            var lowpriced = new LowPricedAuction()
+            {
+                Auction = auction,
+                DailyVolume = 0,
+                Finder = LowPricedAuction.FinderType.USER,
+                TargetPrice = auction.StartingBid,
+                AdditionalProps = new Dictionary<string, string>()
+            };
+            WhitelistFilter(lowpriced);
+            auctionCount.Inc();
+        }
+
+        private void WhitelistFilter(LowPricedAuction lowpriced)
+        {
+            var flip = FlipperService.LowPriceToFlip(lowpriced);
             foreach (var item in FlipFilters)
             {
-                var flip = FlipperService.LowPriceToFlip(new LowPricedAuction()
-                {
-                    Auction = auction,
-                    DailyVolume = 0,
-                    Finder = LowPricedAuction.FinderType.USER,
-                    TargetPrice = auction.StartingBid,
-                    AdditionalProps = new Dictionary<string, string>()
-                });
                 var matches = item.Value.Item2.Value.MatchesSettings(flip);
                 if (matches.Item1 && matches.Item2.StartsWith("white"))
                     NotificationService.WhitelistedFlip(item.Value.Item1, flip, item.Value.Item2);
             }
-            auctionCount.Inc();
         }
 
         private async Task NotifyAllIn(ConcurrentDictionary<string, ConcurrentBag<Subscription>> collection, string key, Func<Subscription, Task> action)
