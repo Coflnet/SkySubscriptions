@@ -1,3 +1,4 @@
+using Coflnet.Core;
 using Coflnet.Security.OpenBao;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,14 @@ namespace Coflnet.Sky.Subscriptions
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((_, config) => config.AddOpenBaoFromEnvironment())
+                .ConfigureLogging((context, logging) =>
+                {
+                    // Shared OTel logging configuration from Coflnet.Core.
+                    // Bridges ILogger -> OTLP (HttpProtobuf) so logs land in Loki, correlated with traces in Jaeger.
+                    logging.AddOpenTelemetryLogging(
+                        context.Configuration,
+                        context.Configuration["JAEGER_SERVICE_NAME"] ?? "sky-subscriptions");
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
