@@ -154,32 +154,43 @@ namespace Coflnet.Sky.Subscriptions
             return false;
         }
 
+        private static string ResolveName(string uuid) => PlayerSearch.Instance.GetNameWithCache(uuid);
+
         public void Sold(Subscription sub, SaveAuction auction)
         {
-            var text = $"{auction.ItemName} was sold to {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub, "Item Sold", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            var message = NotificationTexts.Sold(auction, ResolveName);
+            if (message == null)
+                return; // ended without a buyer, nothing was sold
+            var text = message.Text;
+            Task.Run(() => Send(sub, message.Title, text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void Outbid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
-            var outBidBy = auction.HighestBidAmount - bid.Amount;
-            var text = $"You were outbid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b => b.Amount).FirstOrDefault().Bidder)} by {outBidBy}";
+            var message = NotificationTexts.Outbid(auction, bid, ResolveName);
+            if (message == null)
+                return;
+            var text = message.Text;
             if (sub.NotTriggerAgainBefore > DateTime.UtcNow)
                 return;
             sub.NotTriggerAgainBefore = DateTime.UtcNow.AddMinutes(1);
-            Task.Run(() => Send(sub, "Outbid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            Task.Run(() => Send(sub, message.Title, text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void NewBid(Subscription sub, SaveAuction auction, SaveBids bid)
         {
-            var text = $"New bid on {auction.ItemName} by {PlayerSearch.Instance.GetNameWithCache(auction.Bids.FirstOrDefault().Bidder)} for {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub, "New bid", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            var message = NotificationTexts.NewBid(auction, ResolveName);
+            if (message == null)
+                return;
+            var text = message.Text;
+            Task.Run(() => Send(sub, message.Title, text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void AuctionOver(Subscription sub, SaveAuction auction)
         {
-            var text = $"Highest bid is {auction.HighestBidAmount}";
-            Task.Run(() => Send(sub, $"Auction for {auction.ItemName} ended", text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
+            var message = NotificationTexts.AuctionOver(auction);
+            var text = message.Text;
+            Task.Run(() => Send(sub, message.Title, text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction))).ConfigureAwait(false);
         }
 
         public void PriceAlert(Subscription sub, string productId, double value)
@@ -294,7 +305,97 @@ namespace Coflnet.Sky.Subscriptions
         {
             if (!Matches(auction, sub))
                 return;
-            Task.Run(() => Send(sub, $"Auction bought", $"{PlayerSearch.Instance.GetNameWithCache(auction.Bids.OrderByDescending(b => b.Amount).FirstOrDefault().Bidder)} bought {auction.ItemName}", AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction)));
+            var message = NotificationTexts.PlayerBuy(auction, ResolveName);
+            if (message == null)
+                return;
+            Task.Run(() => Send(sub, message.Title, message.Text, AuctionUrl(auction), ItemIconUrl(auction.Tag), FormatAuction(auction)));
+        }
+    }
+
+    /// <summary>
+    /// Title and text of a push notification
+    /// </summary>
+    internal record NotificationMessage(string Title, string Text);
+
+    /// <summary>
+    /// Decides whether an auction notification is sent and what it says, without any infrastructure.
+    /// Each function returns null when nothing must be sent. A missing bidder name is shown as "unknown"
+    /// and never passed to the name resolver.
+    /// </summary>
+    internal static class NotificationTexts
+    {
+        private static string Name(string bidder, Func<string, string> resolve)
+        {
+            return bidder == null ? "unknown" : resolve(bidder);
+        }
+
+        /// <summary>The first listed bid is the buyer</summary>
+        internal static NotificationMessage Sold(SaveAuction auction, Func<string, string> resolve)
+        {
+            if (!auction.HasBids())
+                return null;
+            return new NotificationMessage("Item Sold", $"{auction.ItemName} was sold to {Name(auction.FirstBidder(), resolve)} for {auction.HighestBidAmount}");
+        }
+
+        /// <summary>Names the highest bidder, <paramref name="bid"/> is the bid that was outbid</summary>
+        internal static NotificationMessage Outbid(SaveAuction auction, SaveBids bid, Func<string, string> resolve)
+        {
+            if (!auction.HasBids())
+                return null;
+            var outBidBy = auction.HighestBidAmount - bid.Amount;
+            return new NotificationMessage("Outbid", $"You were outbid on {auction.ItemName} by {Name(auction.HighestBidder(), resolve)} by {outBidBy}");
+        }
+
+        internal static NotificationMessage NewBid(SaveAuction auction, Func<string, string> resolve)
+        {
+            if (!auction.HasBids())
+                return null;
+            return new NotificationMessage("New bid", $"New bid on {auction.ItemName} by {Name(auction.FirstBidder(), resolve)} for {auction.HighestBidAmount}");
+        }
+
+        /// <summary>Always sent, also for auctions without bids</summary>
+        internal static NotificationMessage AuctionOver(SaveAuction auction)
+        {
+            return new NotificationMessage($"Auction for {auction.ItemName} ended", auction.AuctionOverText());
+        }
+
+        internal static NotificationMessage PlayerBuy(SaveAuction auction, Func<string, string> resolve)
+        {
+            if (!auction.HasBids())
+                return null;
+            return new NotificationMessage("Auction bought", $"{Name(auction.HighestBidder(), resolve)} bought {auction.ItemName}");
+        }
+    }
+
+    /// <summary>
+    /// Bidder lookups that tolerate auctions without bids (<c>Bids</c> null or empty), which is how auctions that ended without a buyer arrive
+    /// </summary>
+    internal static class AuctionBidExtensions
+    {
+        /// <summary>
+        /// Whether the auction has at least one bid. Auctions that ended or were cancelled without a buyer have null or empty Bids.
+        /// </summary>
+        internal static bool HasBids(this SaveAuction auction)
+        {
+            return auction.Bids != null && auction.Bids.Count > 0;
+        }
+
+        /// <summary>Text of the auction over notification, neutral because the same handler serves ended, missing and sold auctions</summary>
+        internal static string AuctionOverText(this SaveAuction auction)
+        {
+            return auction.HasBids() ? $"Highest bid is {auction.HighestBidAmount}" : "There were no bids";
+        }
+
+        /// <summary>First listed bidder, null if there are no bids</summary>
+        internal static string FirstBidder(this SaveAuction auction)
+        {
+            return auction.Bids?.FirstOrDefault()?.Bidder;
+        }
+
+        /// <summary>Bidder with the highest amount, null if there are no bids</summary>
+        internal static string HighestBidder(this SaveAuction auction)
+        {
+            return auction.Bids?.OrderByDescending(b => b.Amount).FirstOrDefault()?.Bidder;
         }
     }
 

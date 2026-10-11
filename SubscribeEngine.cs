@@ -301,23 +301,33 @@ namespace Coflnet.Sky.Subscriptions
         /// <param name="auction"></param>
         public void BinSold(SaveAuction auction)
         {
-            var key = auction.AuctioneerId;
-            NotifyIfExisting(this.SoldSubs, key, sub =>
+            // ended, missing and sold topics all arrive here; auctions that ended without a buyer have no bids
+            var hasBids = auction.HasBids();
+            if (hasBids)
             {
-                NotificationService.Sold(sub, auction);
-            });
+                NotifyIfExisting(this.SoldSubs, auction.AuctioneerId, sub =>
+                {
+                    NotificationService.Sold(sub, auction);
+                });
+            }
             NotifyIfExisting(this.AuctionSub, auction.Uuid, sub =>
             {
                 NotificationService.AuctionOver(sub, auction);
             });
-            NotifyIfExisting(UserBuy, auction.Bids.OrderByDescending(s => s.Amount).FirstOrDefault()?.Bidder ?? "None", sub =>
+            var buyer = auction.HighestBidder();
+            if (hasBids && buyer != null)
             {
-                NotificationService.PlayerBuy(sub, auction);
-            });
+                NotifyIfExisting(UserBuy, buyer, sub =>
+                {
+                    NotificationService.PlayerBuy(sub, auction);
+                });
+            }
         }
 
         private void NotifyIfExisting(ConcurrentDictionary<string, ConcurrentBag<Subscription>> target, string key, Action<Subscription> todo)
         {
+            if (key == null)
+                return; // a bid without bidder cannot have subscribers
             if (target.TryGetValue(key, out ConcurrentBag<Subscription> subscribers))
             {
                 foreach (var item in subscribers)
@@ -333,6 +343,9 @@ namespace Coflnet.Sky.Subscriptions
         /// <param name="auction"></param>
         public void NewBids(SaveAuction auction)
         {
+            // auctions without bids are published with Bids == null
+            if (!auction.HasBids())
+                return;
             foreach (var bid in auction.Bids.OrderByDescending(b => b.Amount).Skip(1))
             {
                 NotifyIfExisting(this.OutbidSubs, bid.Bidder, sub =>
