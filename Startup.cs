@@ -40,6 +40,7 @@ namespace Coflnet.Sky.Subscriptions
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SkySubscriptions", Version = "v1" });
+                c.DocumentFilter<Coflnet.OpenApi.NullOnlySchemaDocumentFilter>();
                 // Set the comments path for the Swagger JSON and UI.
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
