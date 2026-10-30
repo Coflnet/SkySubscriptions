@@ -20,6 +20,9 @@ using Prometheus;
 using Coflnet.Sky.Commands.Shared;
 using Coflnet.Sky.Items.Client.Api;
 using Coflnet.Sky.Filter;
+using Coflnet.Core.Security;
+using Coflnet.Sky.Subscriptions.Infrastructure;
+using Microsoft.AspNetCore.Http;
 
 namespace Coflnet.Sky.Subscriptions
 {
@@ -47,19 +50,20 @@ namespace Coflnet.Sky.Subscriptions
                 c.IncludeXmlComments(xmlPath);
             });
 
-            // Replace with your server version and type.
-            // Use 'MariaDbServerVersion' for MariaDB.
-            // Alternatively, use 'ServerVersion.AutoDetect(connectionString)'.
-            // For common usages, see pull request #1233.
             var serverVersion = new MariaDbServerVersion(new Version(Configuration["MARIADB_VERSION"]));
-
-            // Replace 'YourDbContext' with the name of your own DbContext derived class.
-            services.AddDbContext<SubsDbContext>(
-                dbContextOptions => dbContextOptions
-                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion, b=>b.EnableRetryOnFailure(5))
-                    .EnableSensitiveDataLogging() // <-- These two calls are optional but help
-                    .EnableDetailedErrors()       // <-- with debugging (remove for production).
-            );
+            var connectionString = DatabaseTls.ConnectionString(Configuration);
+            if (Configuration.GetSection("DB:TLS").Exists())
+            {
+                services.AddSingleton(_ => PemTlsOptions.FromConfiguration(Configuration.GetSection("DB:TLS")));
+                services.AddSingleton<DatabaseTlsInterceptor>();
+            }
+            services.AddDbContext<SubsDbContext>((provider, options) =>
+            {
+                options.UseMySql(connectionString, serverVersion, b => b.EnableRetryOnFailure(5))
+                    .EnableDetailedErrors();
+                if (Configuration.GetSection("DB:TLS").Exists())
+                    options.AddInterceptors(provider.GetRequiredService<DatabaseTlsInterceptor>());
+            });
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<SubscribeEngine>();
             services.AddSingleton<NBT>();
@@ -100,6 +104,20 @@ namespace Coflnet.Sky.Subscriptions
             {
                 endpoints.MapMetrics();
                 endpoints.MapControllers();
+                endpoints.MapGet("/health/ready", async context =>
+                {
+                    try
+                    {
+                        await DatabaseReadiness.CheckAsync(context.RequestServices.GetRequiredService<SubsDbContext>(),
+                            context.RequestAborted);
+                        await context.Response.WriteAsync("ready");
+                    }
+                    catch (Exception)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                        await context.Response.WriteAsync("not ready");
+                    }
+                });
             });
         }
     }

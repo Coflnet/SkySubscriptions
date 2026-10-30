@@ -472,6 +472,7 @@ namespace Coflnet.Sky.Subscriptions
             using (var scope = scopeFactory.CreateScope())
             using (var context = scope.ServiceProvider.GetRequiredService<SubsDbContext>())
             {
+                await Infrastructure.DatabaseReadiness.CheckAsync(context, stoppingToken);
                 // make sure all migrations are applied
                 await context.Database.MigrateAsync();
                 logger.LogInformation("Database migrated");
