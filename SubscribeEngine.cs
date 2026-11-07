@@ -70,7 +70,7 @@ namespace Coflnet.Sky.Subscriptions
                 config["TOPICS:MISSING_AUCTION"],
                 config["TOPICS:SOLD_AUCTION"] };
             Console.WriteLine("consuming");
-            return Task.WhenAny(
+            return Task.WhenAll(
             Task.Run(() => ProcessSubscription<SaveAuction>(topics, BinSold, token)),
             Task.Run(() => ProcessSubscription<SaveAuction>(new string[] { config["TOPICS:NEW_AUCTION"] }, NewAuction, token)),
             Task.Run(() => ProcessSubscription<BazaarPull>(new string[] { config["TOPICS:BAZAAR"] }, NewBazaar, token)),
@@ -84,6 +84,15 @@ namespace Coflnet.Sky.Subscriptions
         }
 
         private Task ProcessSubscription<T>(string[] topics, Action<T> handler, CancellationToken token)
+        {
+            var backoff = new ConsumeBackoff();
+            return ConsumeRetryLoop.RunAsync(
+                "subscriptions " + topics[0],
+                () => ConsumeSubscriptionBatches(topics, handler, backoff, token),
+                backoff, logger, token);
+        }
+
+        private Task ConsumeSubscriptionBatches<T>(string[] topics, Action<T> handler, ConsumeBackoff backoff, CancellationToken token)
         {
             return Kafka.KafkaConsumer.ConsumeBatch<T>(config, topics, (batch) =>
             {
@@ -99,6 +108,7 @@ namespace Coflnet.Sky.Subscriptions
                     }
                 }
                 consumeCount.Inc(batch.Count());
+                backoff.Reset();
                 return Task.CompletedTask;
             }, token, "sky-sub-engine", 100, Confluent.Kafka.AutoOffsetReset.Latest);
         }
